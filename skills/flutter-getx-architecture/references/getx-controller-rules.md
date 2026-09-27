@@ -119,6 +119,10 @@ Controllers receive repositories and services through constructor injection.
 
 Do not resolve ordinary dependencies with `Get.find()` or `getIt()` inside controller methods.
 
+When a GetX dependency is intentionally accessed through `Get.find<T>()` and is required by the binding contract, call `Get.find<T>()` directly. Do not hide missing-registration bugs behind `Get.isRegistered<T>()` checks.
+
+Use `Get.isRegistered<T>()` only when registration is truly optional or lifecycle-dependent.
+
 Do not accept or retain `BuildContext` in a controller. UI context belongs to widgets.
 
 Keep dependency flow one-way:
@@ -134,6 +138,55 @@ API / DAO / SDK
 ```
 
 Repositories and lower layers must not import or call controllers.
+
+## Guard Clause Rule
+
+Keep controller methods flat.
+
+Prefer early exits:
+
+```dart
+Future<void> load() async {
+  if (_isLoading.value) return;
+  if (_id == null) return;
+
+  await _load();
+}
+```
+
+Avoid wrapping the main logic in multiple nested `if` blocks.
+
+For short single-statement guards, prefer the compact form without braces when it stays readable:
+
+```dart
+if (_isLoading.value) return;
+if (items.isEmpty) return;
+```
+
+## Controller Error Logging Rule
+
+Unexpected exceptions caught in controllers must not disappear silently.
+
+Prefer:
+
+```dart
+try {
+  await _repository.refresh();
+} catch (e, st) {
+  log(
+    'Failed to refresh',
+    name: 'ProfileController._refresh',
+    error: e,
+    stackTrace: st,
+  );
+
+  // Map to presentation error state or rethrow as appropriate.
+}
+```
+
+If repositories already convert known infrastructure exceptions into typed `AppFailure` results, controllers should handle the typed result instead of wrapping every repository call in redundant `try/catch`.
+
+Do not log the same error again at every layer unless each log adds genuinely different operational context.
 
 ## Derived State Rule
 
