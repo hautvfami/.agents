@@ -398,12 +398,18 @@ Before wrapping up:
 - confirm controller methods and helpers used only inside their own file are private
 - confirm stable references use `final` and obvious immutable Flutter values/widgets use `const`
 - confirm dependencies are resolved at composition boundaries and injected rather than looked up deep in business code
+- confirm required GetX dependencies are not hidden behind `Get.isRegistered → Get.find` defensive checks
+- confirm missing required registration fails fast instead of silently skipping behavior
 - confirm `BuildContext` does not leak into controllers, services, repositories, or DAOs
 - confirm avoidable `dynamic`, unnecessary `late`, and exposed mutable collections are removed
 - confirm dependencies flow View → Controller → Repository/Service → API/DAO/SDK without reverse imports
 - confirm derived state is not duplicated as separately synchronized reactive fields
 - confirm enum/sealed state is simpler than the boolean alternative and no Freezed/codegen was introduced just for simple state
 - confirm names are precise but concise and do not repeat class/file context unnecessarily
+- confirm controller and service methods use guard clauses / early returns to avoid unnecessary nesting
+- confirm short one-statement `if` guards remain compact when readability is clear
+- confirm every unexpected caught exception is logged or reported with error and stack trace
+- confirm error logs carry useful context such as `ClassName.methodName` and are not duplicated at every layer
 - confirm meaningful UI blocks are extracted as widgets rather than large widget-returning helpers where appropriate
 - confirm abstractions such as BaseRepository/BaseController/BaseService exist only when real repeated behavior justifies them
 - confirm repeated class-internal logic stays in private methods until real reuse justifies extraction
@@ -471,6 +477,10 @@ When using this skill, finish with a short summary that includes:
 - Controller-internal logic stays private so dead code remains easy for analyzer and IDE tooling to detect.
 - Prefer `final` by default and `const` where practical in Flutter UI.
 - Resolve dependencies at composition boundaries; inject them into controllers and services.
+- Required GetX registrations should fail fast; do not hide wiring bugs with routine `Get.isRegistered` checks.
+- Prefer guard clauses and early returns over nested control flow.
+- Keep short single-statement guards compact when they remain obvious.
+- A caught unexpected exception must be observable: log/report `error` and `stackTrace` with useful call-site context.
 - Keep `BuildContext` in the widget layer.
 - Avoid `dynamic`, unnecessary `late`, and externally mutable internal collections.
 - Preserve one-way dependencies: View → Controller → Repository/Service → API/DAO/SDK.
