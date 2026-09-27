@@ -74,6 +74,8 @@ lib/
           rounded_container.dart
           app_card.dart
           avatar.dart
+    controllers/
+      app_controller.dart
     bindings/
       bindings.dart
       initial_binding.dart
@@ -256,6 +258,7 @@ A binding should not become a second controller.
 Prefer this split:
 
 - `app/di/` for `get_it` or the app-level injector
+- `app/controllers/` for app-lifecycle GetX controllers such as `AppController`
 - `app/bindings/` for GetX bindings only
 
 Put these in `get_it`:
@@ -271,13 +274,45 @@ Put these in `get_it`:
 
 Put these in GetX bindings:
 
-- `GetxController`
+- feature-scoped `GetxController`
+- one app-level `AppController` when truly cross-feature reactive state exists
 - GetX store abstractions if the project uses them
 - `GetxService` or route-scoped GetX service objects
 
 Do not use GetX bindings as a replacement for the entire app's DI container.
 
 Folder placement does not decide DI ownership. Registration follows lifecycle and framework coupling, not the folder name.
+
+## App-Level State Rule
+
+Use `app/controllers/app_controller.dart` for small reactive state that must stay consistent across unrelated routes and follows the application lifecycle.
+
+Good candidates:
+
+- authenticated user or session snapshot
+- authentication status
+- purchase entitlement or premium-access snapshot
+- other small cross-feature state that many routes need to observe
+
+Keep app-global presentation state separate from app-global infrastructure:
+
+```text
+get_it infrastructure
+  AuthService
+  PurchaseService
+  repositories
+       ↓
+GetX app state
+  AppController
+       ↓
+feature controllers / views
+```
+
+Register `AppController` once in `InitialBinding` and keep it alive for the app lifecycle.
+
+Do not move route-local form state, filters, tab selection, page loading, or pagination into `AppController`.
+
+Do not let `AppController` absorb raw API calls, store SDK code, database queries, or unrelated business workflows.
 
 ## Bootstrap Rule
 
@@ -431,6 +466,8 @@ Folder placement and DI ownership are related but not identical concerns.
 For deep links, prefer one app-level `DeeplinkService` that receives URIs from `app_links`, parses them, and forwards explicit navigation intents into the app.
 
 For purchases, prefer one app-level `PurchaseService` that coordinates store connection, purchase events, entitlement refresh, restore flow, and communication with the rest of the app.
+
+If purchase entitlement is consumed across unrelated routes, project that small shared reactive snapshot through `AppController` instead of duplicating entitlement observables in feature controllers. Keep store SDK coordination inside `PurchaseService`.
 
 Read [purchase-rules.md](purchase-rules.md) when the project needs in-app purchase architecture or implementation guidance.
 
