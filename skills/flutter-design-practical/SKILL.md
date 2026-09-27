@@ -141,7 +141,23 @@ If that repeated pattern is part of the app's design language, move it into `app
 
 Read [references/flutter-theme-blueprint.md](references/flutter-theme-blueprint.md) when the app needs a clean token structure.
 
-### 7. Design for real usage, not isolated screens
+### 7. Choose layout primitives with cost awareness
+
+Prefer Flutter's normal constraint system before introducing layout-time measurement.
+
+Inside `Row`, `Column`, or `Flex`, prefer `Expanded`, `Flexible`, `Spacer`, `Align`, `SizedBox`, and `AspectRatio` when they express the requirement directly.
+
+Use `LayoutBuilder` only when the subtree genuinely needs incoming parent constraints, such as choosing a compact versus wide composition.
+
+Treat `IntrinsicHeight` and `IntrinsicWidth` as expensive fallback tools because they may require an additional intrinsic layout pass.
+
+Avoid intrinsic measurement in repeated list/grid items or deep subtrees unless it is genuinely required and the cost is acceptable.
+
+Do not replace a simple flex layout with manual width calculations merely because they look more explicit.
+
+Read [references/design-system-rules.md](references/design-system-rules.md) for detailed layout-cost rules.
+
+### 8. Design for real usage, not isolated screens
 
 When building or refactoring a screen:
 
@@ -155,7 +171,7 @@ When building or refactoring a screen:
 
 Prefer mobile-first layouts that scale upward. Do not over-engineer desktop-style breakpoints unless the product needs them.
 
-### 8. Validate before finishing
+### 9. Validate before finishing
 
 Before wrapping up:
 
@@ -165,6 +181,8 @@ Before wrapping up:
 - confirm colors come from roles, not ad-hoc values
 - confirm typography hierarchy is consistent
 - confirm the screen does not rely on container stacking for visual structure
+- confirm simple flex constraints were not replaced by unnecessary `LayoutBuilder` calculations
+- confirm `IntrinsicHeight` / `IntrinsicWidth` are used only when intrinsic sizing is genuinely required
 - confirm common single-box layout concerns were not split across unnecessary `ConstrainedBox` / `DecoratedBox` / `Padding` / `Center` layers
 - confirm custom shadows do not bleed excessively into nearby surfaces or create a muddy / tinted appearance
 - confirm semantic Flutter widgets or design-system base components are used where appropriate
