@@ -56,13 +56,13 @@ class ProfileController extends GetxController {
 }
 ```
 
-If a field or method is only used inside the controller, prefix it with `_`.
+If a field, method, getter, setter, mapper, validator, or helper is only used inside the controller file, prefix it with `_`. Internal controller logic should stay private unless another file genuinely needs to call it.
 
 Dart privacy is library-scoped rather than class-scoped. With the repository convention of keeping one primary class per file, this still prevents unrelated files from depending on controller internals.
 
 Do not add leading underscores to ordinary local variables or parameters. They are already locally scoped.
 
-This reduces accidental external mutation, keeps the public API intentional, and makes unused internal code easier to identify.
+This reduces accidental external mutation, keeps the public API intentional, and makes unused internal code easier to identify. It also allows analyzer and IDE tooling to surface dead private members more reliably after refactors.
 
 ## App-Level Controller Rule
 
@@ -113,6 +113,41 @@ Do not:
 
 Global state should reduce duplication and inconsistent snapshots, not create a god object.
 
+## Dependency And Context Rule
+
+Controllers receive repositories and services through constructor injection.
+
+Do not resolve ordinary dependencies with `Get.find()` or `getIt()` inside controller methods.
+
+Do not accept or retain `BuildContext` in a controller. UI context belongs to widgets.
+
+Keep dependency flow one-way:
+
+```text
+View
+  ↓
+Controller
+  ↓
+Repository / App Service
+  ↓
+API / DAO / SDK
+```
+
+Repositories and lower layers must not import or call controllers.
+
+## Derived State Rule
+
+Do not create a reactive field when the value can be derived cheaply and reliably from an existing source of truth.
+
+Prefer:
+
+```dart
+User? get currentUser => _currentUser.value;
+bool get isLoggedIn => currentUser != null;
+```
+
+over keeping a separate `RxBool isLoggedIn` that must be synchronized manually.
+
 ## Size Rules
 
 Warning signs that a controller is too large:
@@ -145,13 +180,15 @@ Do not dump every startup action into `onInit` if some work should happen lazily
 
 Controllers should expose async state in a way the view can read clearly.
 
-Common patterns:
+For simple flows, a small status enum is usually enough.
 
-- explicit booleans such as `isLoading`
-- status enum
-- `StateMixin<T>` when a resource-centric async model fits well
+Avoid several booleans that describe the same state machine, such as `isLoading`, `hasError`, `isEmpty`, and `isSuccess`, when those values can contradict each other.
 
-Prefer clarity over cleverness.
+Use a small `sealed` hierarchy only when different states need different payloads and the hierarchy remains obvious in one file.
+
+Do not introduce Freezed, union code generation, or another state framework merely to model a few simple controller states.
+
+Prefer the simplest state representation that prevents invalid combinations and remains easy to read.
 
 ## Function Signature Rule
 
@@ -172,6 +209,14 @@ ResultDart<UserProfile, AppFailure> mapProfile(ApiResponse<ProfileDto> response)
 Avoid vague helper methods with unclear inputs, hidden side effects, or ambiguous return values.
 
 Named parameters are usually preferable when a function has more than one meaningful input.
+
+Keep names precise but concise. Do not repeat context already supplied by the controller or file name.
+
+Prefer `_load()` inside `ProfileController` when there is only one obvious load operation. Use `_loadProfile()` only when the longer name actually disambiguates it from another operation.
+
+Avoid names such as `loadProfileControllerProfileData()`, `fetchLoadUserData()`, or other combinations that repeat class context or stack synonyms.
+
+Use predicate-style boolean names such as `isLoading`, `hasPremium`, `canPurchase`, and `shouldRefresh`.
 
 ## Modern Dart Syntax Rule
 
