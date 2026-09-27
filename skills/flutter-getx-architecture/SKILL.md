@@ -82,7 +82,7 @@ Prefer a shared data layer for remote API code when:
 
 Keep feature-only code inside the feature. Move transport-level code to shared app data when reuse is real.
 
-Repositories live in `app/data/repositories/` as a single app-wide rule.
+When repositories are justified, keep them consistently under `app/data/repositories/`; do not create that layer for features that do not need it.
 
 Read [references/getx-module-blueprint.md](references/getx-module-blueprint.md) for the default module structure.
 
@@ -513,7 +513,7 @@ When using this skill, finish with a short summary that includes:
 - whether class and library public API surfaces were narrowed appropriately
 - whether modern Dart dot shorthand was used where it improves readability
 - whether truly app-wide reactive state was centralized without creating a god controller
-- whether the API layer was normalized to `retrofit`, `json_serializable`, and `result_dart`
+- whether the API flow stayed at the minimum useful depth: direct typed Retrofit for simple features, with repositories/services/`result_dart` added only where they provide real value
 - whether local persistence was placed in `shared_preferences` or `drift` for the right reasons
 - whether asset access was normalized to `flutter_gen`
 - whether app configuration was normalized to `envied`
