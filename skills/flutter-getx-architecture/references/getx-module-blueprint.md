@@ -156,6 +156,20 @@ Put code in shared app layers when:
 - the backend surface is still small enough that per-feature API folders would add noise
 - route dependency setup is easier to understand from a centralized bindings directory
 
+Keep dependency direction one-way:
+
+```text
+features/views
+      ↓
+controllers
+      ↓
+repositories / app services
+      ↓
+API / Drift DAO / SDK
+```
+
+Lower layers must not import presentation layers. Repositories must not navigate or depend on GetX controllers.
+
 Examples of app-wide layers:
 
 - app bootstrap
@@ -192,6 +206,9 @@ Heuristics:
 - if a file contains several meaningful classes, split them unless they are tiny helpers tightly bound to one owner
 - when a page extracts dedicated widgets, move them into `widgets/` rather than stacking many classes in the page file
 - keep `main.dart` thin and move startup orchestration into `app/bootstrap/`
+- prefer one primary class per file so Dart library-private members remain easy to reason about
+- make file-internal helpers private instead of exporting them by default
+- keep names concise; do not repeat the surrounding class, feature, or file name unless needed for disambiguation
 
 ## Barrel File Rule
 
@@ -231,6 +248,9 @@ Rules:
 - use feature-level barrels such as `login.dart` to expose the public surface of a feature cleanly
 - use subfolder barrels such as `controllers.dart`, `views.dart`, `widgets.dart`, `models.dart`, and `repositories.dart` when those folders contain multiple related files
 - keep barrel boundaries intentional: a barrel should represent one module boundary, not a random collection of files
+- export only the module's intentional public API
+- do not export generated Drift internals, DAO implementation details, private helpers, or internal DTOs merely because they share a folder
+- prefer a smaller public surface that allows internal files to change without affecting unrelated features
 
 Good example:
 
