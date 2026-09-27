@@ -1,3 +1,5 @@
+![Flutter + GetX .agents](https://raw.githubusercontent.com/hautvfami/.agents/58e70b3601d17521f937ae69ad6be164a7056247/images/flutter-getx-agents-banner.svg)
+
 # Flutter Skills
 
 This repository contains reusable skills and architecture rules for Flutter projects, including structure, design system, localization, deep linking, storage, bootstrap, and coding conventions.
