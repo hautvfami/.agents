@@ -485,6 +485,155 @@ Do not add `get` mechanically when it adds no meaning.
 
 Within a class whose context is already clear, prefer `load()` over `loadProfile()` if there is only one obvious resource being loaded. Use the longer name when multiple load operations exist and disambiguation is useful.
 
+## Reuse And Extraction Rule
+
+When logic repeats, consider extracting it, but choose the smallest abstraction that matches the ownership of the behavior.
+
+Prefer this order of consideration:
+
+1. private method when the logic belongs to one class or one file
+2. shared top-level method or helper when the logic is pure but does not naturally belong to a specific type
+3. extension when the behavior naturally reads as an operation on an existing type
+4. mixin when multiple classes genuinely share reusable instance behavior or lifecycle logic
+5. a dedicated class or service when the behavior has its own state, dependencies, or responsibility
+
+Do not jump directly to mixins, extensions, base classes, or generic helpers merely because two code blocks look similar.
+
+### Private Method First
+
+If repeated logic is only used inside one controller, service, repository, or widget file, prefer a private method.
+
+```dart
+class CheckoutController extends GetxController {
+  Future<void> submit() async {
+    if (!_canSubmit()) return;
+
+    await _save();
+  }
+
+  bool _canSubmit() {
+    // Internal validation.
+    return true;
+  }
+
+  Future<void> _save() async {
+    // Internal flow.
+  }
+}
+```
+
+Do not extract internal logic into a global helper or extension unless another real caller needs it.
+
+This keeps usage traceable and lets analyzer / IDE tooling identify dead private methods after refactors.
+
+### Extension Rule
+
+Use an extension when the operation conceptually belongs to the value being extended and is useful in multiple places.
+
+Good candidates:
+
+- date and time formatting
+- small string normalization
+- nullable convenience helpers with clear semantics
+- collection helpers that are domain-neutral and genuinely repeated
+
+Example:
+
+```dart
+extension DateTimeFormatting on DateTime {
+  String toDateText({String? locale}) {
+    return DateFormat.yMMMd(locale).format(this);
+  }
+
+  String toDateTimeText({String? locale}) {
+    return DateFormat.yMMMd(locale).add_Hm().format(this);
+  }
+}
+```
+
+Usage stays close to the value:
+
+```dart
+final text = createdAt.toDateText();
+```
+
+Prefer extensions over scattered calls such as:
+
+```dart
+DateFormat('dd/MM/yyyy').format(createdAt);
+DateFormat('dd/MM/yyyy').format(updatedAt);
+DateFormat('dd/MM/yyyy').format(expiredAt);
+```
+
+when the app repeatedly uses the same display format.
+
+Do not create extensions for behavior that needs hidden dependencies, mutable state, navigation, network access, storage access, or complex business orchestration.
+
+### Date And Time Formatting Rule
+
+Common date/time presentation formatting should normally live in one or a small number of `DateTime` extensions.
+
+Prefer a structure such as:
+
+```text
+app/
+  extensions/
+    extensions.dart
+    date_time_extensions.dart
+```
+
+Keep common display formats centralized so the app does not scatter raw format strings such as `'dd/MM/yyyy'`, `'HH:mm'`, or `'yyyy-MM-dd'` across controllers and widgets.
+
+Prefer semantic methods whose names describe the display intent without becoming excessively long.
+
+For example:
+
+```dart
+extension DateTimeFormatting on DateTime {
+  String toDateText({String? locale}) { ... }
+  String toDateTimeText({String? locale}) { ... }
+  String toTimeText({String? locale}) { ... }
+}
+```
+
+If one feature has a genuinely unique date representation used once, keeping it local can be clearer than expanding a global extension.
+
+Do not put API serialization formats and UI display formats into one ambiguous method. For example, a backend ISO timestamp and a localized user-facing date have different responsibilities.
+
+### Mixin Rule
+
+Use a mixin only when multiple classes genuinely share instance behavior that belongs to those classes.
+
+A mixin is reasonable when:
+
+- the same behavior is reused by multiple concrete classes
+- the behavior needs access to the host object's members
+- inheritance would be artificial or too restrictive
+- the resulting API remains small and easy to trace
+
+Avoid mixins for:
+
+- a few standalone utility functions
+- behavior used by only one class
+- hiding unrelated dependencies
+- replacing composition when a dedicated service is clearer
+- creating a generic `ControllerMixin`, `LoadingMixin`, or `CommonMixin` before repeated behavior actually exists
+
+Keep mixins focused on one coherent capability.
+
+### Helper Rule
+
+Use a helper or top-level method when logic is:
+
+- pure
+- stateless
+- not naturally owned by an existing type
+- reused by more than one caller
+
+Examples include parsers, validators, or small conversions that do not fit naturally as extensions.
+
+Do not turn `helpers/` into a dumping ground for unrelated code.
+
 ## Widget Extraction Rule
 
 When a meaningful UI block deserves its own identity, prefer extracting a `StatelessWidget` or `StatefulWidget` instead of a helper function returning `Widget`.
@@ -594,6 +743,11 @@ Before finishing Dart or Flutter changes:
 - use concise names without repeating class/file context
 - use predicate-style boolean names
 - avoid premature base classes and generic abstractions
+- keep repeated logic local as a private method until real cross-file reuse appears
+- prefer extensions when reusable behavior naturally belongs to an existing type
+- keep common date/time display formatting in `DateTime` extensions instead of scattering raw `DateFormat` patterns
+- use mixins only for genuine shared instance behavior, not generic utility dumping grounds
+- keep helpers pure, stateless, and intentionally scoped
 - extract meaningful UI blocks as widgets when it improves structure
 - keep imports sorted, minimal, and free of third-party `src/` paths
 - use class modifiers only when they communicate a useful boundary
