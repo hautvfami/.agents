@@ -149,7 +149,7 @@ Apply the same visibility discipline across all handwritten Dart code:
 
 For state used across unrelated routes, promote only the shared reactive projection to app scope. A small `AppController` may expose auth/session and purchase-entitlement state, while `AuthService`, `PurchaseService`, repositories, APIs, and storage keep the underlying coordination and infrastructure responsibilities.
 
-Read [references/dart-code-conventions.md](references/dart-code-conventions.md) for visibility, dot shorthand, and app-wide state rules.
+Read [references/dart-code-conventions.md](references/dart-code-conventions.md) for the full Dart/GetX code conventions, including private APIs, `final`/`const`, dependency resolution, `BuildContext` boundaries, typed data, state modeling, naming, imports, class modifiers, module exports, and app-wide state.
 
 ### 6. Enforce the API stack: `retrofit` + `json_serializable` + `result_dart`
 
@@ -395,6 +395,18 @@ Before wrapping up:
 - confirm non-GetX infrastructure is resolved from `get_it` or the project's app-level DI container
 - confirm controllers do not own too many responsibilities
 - confirm non-API fields, methods, helpers, and declarations are private by default
+- confirm controller methods and helpers used only inside their own file are private
+- confirm stable references use `final` and obvious immutable Flutter values/widgets use `const`
+- confirm dependencies are resolved at composition boundaries and injected rather than looked up deep in business code
+- confirm `BuildContext` does not leak into controllers, services, repositories, or DAOs
+- confirm avoidable `dynamic`, unnecessary `late`, and exposed mutable collections are removed
+- confirm dependencies flow View → Controller → Repository/Service → API/DAO/SDK without reverse imports
+- confirm derived state is not duplicated as separately synchronized reactive fields
+- confirm enum/sealed state is simpler than the boolean alternative and no Freezed/codegen was introduced just for simple state
+- confirm names are precise but concise and do not repeat class/file context unnecessarily
+- confirm meaningful UI blocks are extracted as widgets rather than large widget-returning helpers where appropriate
+- confirm abstractions such as BaseRepository/BaseController/BaseService exist only when real repeated behavior justifies them
+- confirm imports are minimal and intentional module barrels export only stable public surfaces
 - confirm public mutable state is intentional and not just exposed for convenience
 - confirm dot shorthand is used where Dart >= 3.10 and the context type is obvious
 - confirm truly cross-feature reactive state such as auth/session or purchase entitlement is not duplicated across feature controllers
@@ -452,6 +464,17 @@ When using this skill, finish with a short summary that includes:
 - Bindings are the default composition root for GetX features.
 - Controllers orchestrate; services and repositories execute.
 - Private by default: expose only intentional APIs; keep internal fields and helpers library-private.
+- Controller-internal logic stays private so dead code remains easy for analyzer and IDE tooling to detect.
+- Prefer `final` by default and `const` where practical in Flutter UI.
+- Resolve dependencies at composition boundaries; inject them into controllers and services.
+- Keep `BuildContext` in the widget layer.
+- Avoid `dynamic`, unnecessary `late`, and externally mutable internal collections.
+- Preserve one-way dependencies: View → Controller → Repository/Service → API/DAO/SDK.
+- Prefer derived getters over duplicated state.
+- Use enum or a small sealed hierarchy only when it makes state simpler; do not add Freezed/codegen for simple state.
+- Names should be precise and short enough to scan; do not repeat obvious class or file context.
+- Prefer simple concrete code over premature base classes or generic abstractions.
+- Barrel files expose stable module APIs, not every implementation file.
 - Use Dart dot shorthand when the context type is obvious and the project language version supports it.
 - Global state is for cross-feature app-lifecycle state, not feature-local convenience.
 - `AppController` may expose shared auth/session and entitlement state; underlying SDK and data coordination stays in services and repositories.
