@@ -79,6 +79,10 @@ Elevation rules:
 - do not use large hand-made shadows by default
 - prefer `Material` elevation or extremely soft shadows only when hierarchy truly needs them
 - if using `BoxShadow`, keep it extremely restrained: small blur, no exaggerated spread, very low alpha
+- do not add shadow merely because a surface has a `BoxDecoration`
+- shadow should communicate elevation, floating hierarchy, or separation that color/border/spacing cannot express well enough
+- avoid large colored shadows and wide blur/spread combinations that bleed into adjacent content and make the UI look muddy or visually stained
+- prefer a small reusable shadow scale or Material elevation over unique shadow recipes per screen
 
 ## Component Heights
 
@@ -157,6 +161,9 @@ Rules:
 ## Component Composition Rules
 
 - Avoid "container hell": do not stack more than two decorative `Container` layers without a specific visual reason.
+- Avoid wrapper hell as well: if `ConstrainedBox`, `DecoratedBox`, `Padding`, and `Center` all describe one visual box, consider a single `Container` with `constraints`, `decoration`, `padding`, and `alignment`.
+- Do not flatten wrappers that carry distinct semantics or behavior such as interaction, animation, scrolling, clipping, safe-area handling, or repaint isolation.
+- Prefer the shallowest source tree that still makes layout behavior obvious. Treat this primarily as a readability and maintainability rule, not a promise of automatic rendering-speed improvement.
 - Prefer `Padding`, `SizedBox`, `Divider`, `Row`, `Column`, and slivers for structure.
 - Prefer semantic Flutter widgets such as `Card`, `CircleAvatar`, `AppBar`, `ListTile`, `TextButton`, and `IconButton`.
 - If app-wide visual consistency is required, build base components in the design system and consume those instead of rebuilding styled containers in feature code.
