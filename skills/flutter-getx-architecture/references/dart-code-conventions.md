@@ -909,6 +909,96 @@ Examples include parsers, validators, or small conversions that do not fit natur
 
 Do not turn `helpers/` into a dumping ground for unrelated code.
 
+## Layout Cost Rule
+
+Prefer the simplest layout primitive that correctly expresses the constraint relationship.
+
+Do not reach for layout-time builders or intrinsic measurement when ordinary constraint-based layout already solves the problem.
+
+### Prefer Flex Primitives First
+
+Inside a `Row`, `Column`, or `Flex`, first consider:
+
+- `Expanded` when a child should fill the remaining main-axis space
+- `Flexible` when a child may use available space without being forced to fill it
+- `Spacer` for proportional empty space
+- `Align` for alignment
+- `SizedBox` for explicit size or gap
+- `AspectRatio` for a known aspect relationship
+
+Example:
+
+```dart
+Row(
+  children: [
+    Expanded(
+      child: content,
+    ),
+    const SizedBox(width: 8),
+    trailing,
+  ],
+)
+```
+
+Do not introduce `LayoutBuilder` merely to calculate the same remaining width manually when `Expanded` or `Flexible` already expresses the layout contract.
+
+### LayoutBuilder Rule
+
+Use `LayoutBuilder` when the widget subtree genuinely needs the parent's incoming constraints to choose its structure or behavior.
+
+Good cases include:
+
+- switching layout structure at a width threshold
+- choosing between compact and wide compositions
+- sizing a child based on actual parent constraints when no simpler layout primitive expresses the relationship
+
+Avoid it when:
+
+- the only goal is to fill remaining space
+- the only goal is centering or padding
+- a fixed constraint, `Expanded`, `Flexible`, `Align`, `SizedBox`, or `AspectRatio` already solves the layout
+- the builder performs expensive work unrelated to constraints
+
+Keep the builder small because it participates in layout-time rebuilding when relevant constraints or dependencies change.
+
+### Intrinsic Measurement Rule
+
+Treat `IntrinsicHeight` and `IntrinsicWidth` as last-resort layout tools.
+
+They can add an extra speculative layout pass before the final layout and can become expensive in deep trees.
+
+Before using them, ask whether the same result can be achieved with:
+
+- explicit constraints
+- `Expanded` or `Flexible`
+- `CrossAxisAlignment.stretch`
+- `Align`
+- a known fixed size
+- `AspectRatio`
+- restructuring the parent layout
+
+Use intrinsic measurement only when the UI genuinely depends on a child's intrinsic size and no simpler constraint relationship expresses the requirement clearly.
+
+Avoid intrinsic widgets around large lists, grids, repeated rows, or deep subtrees unless profiling shows the tradeoff is acceptable.
+
+### Performance Decision Rule
+
+Do not micro-optimize every widget tree preemptively.
+
+Prefer simple Flutter-native constraints first, then profile with DevTools when a screen has real jank or suspicious layout cost.
+
+The default decision order is:
+
+```text
+simple constraints / Flex
+        ↓
+Expanded / Flexible / Align / SizedBox / AspectRatio
+        ↓
+LayoutBuilder when parent constraints are genuinely needed
+        ↓
+IntrinsicHeight / IntrinsicWidth only when intrinsic sizing is truly required
+```
+
 ## Widget Tree Depth Rule
 
 Keep widget trees shallow enough to scan quickly.
@@ -1123,6 +1213,10 @@ Before finishing Dart or Flutter changes:
 - keep helpers pure, stateless, and intentionally scoped
 - extract meaningful UI blocks as widgets when it improves structure
 - reduce unnecessary widget nesting when one clear widget can express the same constraints, padding, alignment, and decoration
+- prefer `Expanded` / `Flexible` / simple constraints over `LayoutBuilder` when the layout does not actually depend on parent constraints
+- avoid `IntrinsicHeight` / `IntrinsicWidth` unless intrinsic measurement is genuinely necessary
+- keep `LayoutBuilder` builders small and constraint-focused
+- profile suspicious layout cost instead of adding complex optimization abstractions preemptively
 - keep semantic, interaction, animation, scrolling, clipping, and repaint boundaries explicit when they add real behavior
 - do not add `BoxShadow` without a clear visual hierarchy reason
 - keep shadow blur, spread, opacity, and color restrained unless the product explicitly requires a stylized effect
