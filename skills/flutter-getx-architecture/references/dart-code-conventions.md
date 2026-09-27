@@ -764,6 +764,24 @@ If the exception is mapped to a known `AppFailure`, logging responsibility may l
 
 Expected control-flow outcomes should not be modeled as exceptions merely so they can be caught and logged.
 
+## Result Abstraction Rule
+
+Do not standardize the whole codebase on a result wrapper unless it consistently makes code simpler.
+
+`result_dart` can be useful when it removes repeated exception mapping and gives callers a concise success/failure contract.
+
+Do not use it when:
+
+- a short `try/catch` is easier to understand
+- several API calls become a long chain of result operators
+- every method needs extra wrapping/unwrapping without adding a meaningful boundary
+- callers immediately convert the result back into exceptions or another wrapper
+- the abstraction creates more lines than the error-handling duplication it removes
+
+Repeated `try/catch` is a signal to inspect duplication, not an automatic reason to introduce a result type.
+
+Extract the smallest repeated concern first.
+
 ## Async Concurrency Rule
 
 Do not serialize independent asynchronous work without a reason.
@@ -1240,6 +1258,9 @@ Before finishing Dart or Flutter changes:
 - keep safety checks at genuine external or untrusted boundaries instead of scattering speculative checks through business logic
 - fail fast on impossible internal states or violated wiring invariants instead of silently recovering without a meaningful recovery path
 - review sequential async chains and use `Future.wait` for independent work when ordering is not required
+- use `result_dart` only when it makes the total success/failure flow simpler than direct async exception handling
+- avoid result-wrapper chains that obscure multi-API orchestration
+- solve repeated error handling at the smallest appropriate boundary instead of imposing one app-wide abstraction
 - keep trivial single-statement guards compact when readability remains clear
 - never leave unexpected `catch` blocks silent; capture `(e, st)` and log or report the issue
 - use contextual error log names such as `ClassName.methodName`
