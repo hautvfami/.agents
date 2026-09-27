@@ -158,6 +158,52 @@ Rules:
 - A screen should usually have one dominant visual rhythm, not many unrelated ones
 - prioritize content over framing; remove borders and background panels that do not improve comprehension
 
+## Layout Cost Rules
+
+Use the cheapest clear layout primitive that expresses the intended constraints.
+
+Prefer first:
+
+- `Expanded` to fill remaining space in `Row`, `Column`, or `Flex`
+- `Flexible` when the child may shrink or use less than the available space
+- `Spacer` for proportional empty flex space
+- `Align` for alignment
+- `SizedBox` for explicit size or gaps
+- `AspectRatio` for fixed aspect relationships
+
+### LayoutBuilder
+
+Use `LayoutBuilder` when the child composition genuinely depends on incoming parent constraints.
+
+Typical good use:
+
+- compact vs wide layout threshold
+- constraint-driven component composition
+
+Avoid using it simply to compute widths that `Expanded` or `Flexible` would resolve naturally.
+
+Keep work inside its builder focused on layout decisions.
+
+### IntrinsicHeight / IntrinsicWidth
+
+Avoid intrinsic sizing where possible.
+
+Intrinsic measurement may add an additional layout pass and can become expensive as tree depth or repeated children grow.
+
+Before using `IntrinsicHeight` or `IntrinsicWidth`, try:
+
+- normal parent constraints
+- `Expanded`
+- `Flexible`
+- `CrossAxisAlignment.stretch`
+- `Align`
+- fixed dimensions when the design actually has them
+- `AspectRatio`
+
+Be especially cautious with intrinsic widgets inside lists, grids, or repeated cells.
+
+Use DevTools layout/performance profiling when intrinsic sizing or constraint-driven rebuilds are suspected of contributing to jank.
+
 ## Component Composition Rules
 
 - Avoid "container hell": do not stack more than two decorative `Container` layers without a specific visual reason.
