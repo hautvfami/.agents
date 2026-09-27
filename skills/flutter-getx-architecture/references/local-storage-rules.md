@@ -117,16 +117,103 @@ Use code generation for the database and generated query types instead of mainta
 
 ## Migration Rule
 
-Treat every persisted schema change as a versioned migration.
+Treat database migrations as **release boundaries**, not as a counter that must increase after every schema edit during development.
 
-When a shipped schema changes:
+Distinguish between:
 
-1. update the table definitions
-2. increment `schemaVersion`
-3. run `dart run drift_dev make-migrations`
-4. implement or review the generated migration steps
-5. run the generated migration tests
-6. verify important user data survives upgrades from older supported schema versions
+- the **last shipped schema version**: the schema already present in a production/app-store release
+- the **pending release schema**: all database changes accumulated since that shipped version
+
+### During Development
+
+When schema work is still unreleased:
+
+- update the table definitions as needed
+- keep accumulating related schema changes for the same upcoming release
+- do not increment `schemaVersion` for every intermediate edit
+- if `schemaVersion` has already been bumped once for the current unreleased release, keep refining that same pending migration instead of bumping again
+- reset/recreate the local development database when necessary while the pending schema is still changing
+- keep a TODO or release-note entry that a production migration must be finalized before release
+
+Do not preserve artificial migration steps for development-only states that no production user has ever had.
+
+For example, if production is on schema `4` and the next app release has three rounds of database edits, prefer one reviewed migration:
+
+```text
+shipped schema 4
+      ↓
+pending release schema 5
+```
+
+instead of creating:
+
+```text
+4 → 5 → 6 → 7
+```
+
+when versions `5` and `6` never shipped.
+
+### Before Release
+
+When preparing a real app release that contains persisted schema changes:
+
+1. identify the last schema version that actually shipped
+2. review all pending schema changes since that release
+3. bump `schemaVersion` once for the release if it has not already been bumped for this unreleased release
+4. consolidate the pending migration so users can upgrade from the last shipped schema to the new release schema
+5. run `dart run drift_dev make-migrations` when using Drift's generated migration workflow
+6. implement/review the migration steps
+7. run migration tests
+8. verify important data survives upgrades from supported shipped versions
+9. record the app version and resulting database schema version in the migration history
+10. clear the pending migration TODO only after the release migration is ready
+
+If the current branch/thread already bumped the next schema version and that version has **not shipped yet**, do not bump it again merely because another schema edit was made. Update the same pending release migration.
+
+### Development Database Caveat
+
+If the local development database has already been opened with the pending schema version and the schema changes again without another version bump, Drift will not magically replay that same migration version.
+
+During unreleased development, use an intentional development workflow such as:
+
+- clear/reinstall the development database
+- use a test database
+- recreate local tables when disposable dev data allows it
+
+Do not use this shortcut for production user databases.
+
+### Migration History
+
+Keep a small human-readable migration history when the app has persistent production data.
+
+A recommended placement is:
+
+```text
+app/storage/drift/migrations/
+  migrations.dart
+  schema_history.md
+```
+
+The history should map app releases to database schema versions, for example:
+
+```text
+App 1.4.0 → DB schema 3
+App 1.6.0 → DB schema 4
+Next release → DB schema 5 (pending)
+```
+
+Record only meaningful release boundaries. Do not turn the history into a log of every development edit.
+
+This makes it easier to answer:
+
+- which schema version is currently in production?
+- has the pending schema bump already been created?
+- which app release introduced a migration?
+- should the next schema edit amend the pending migration or create a new one?
+
+If the project already has a release-note/changelog system that reliably tracks this information, reuse it instead of creating redundant documentation.
+
+### Migration Safety
 
 Prefer generated migration helpers and tests over ad-hoc manual migrations.
 
@@ -134,7 +221,7 @@ Do not use destructive table recreation in production merely because it is easie
 
 Keep generated schema snapshots used for migration verification under version control when the project adopts Drift's migration tooling.
 
-## Reactive Query Rule
+## Reactive Query Rule## Reactive Query Rule
 
 Drift streams can feed GetX state, but keep the framework boundary explicit.
 
