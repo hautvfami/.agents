@@ -32,9 +32,13 @@ Prefer:
 
 ```text
 app/
+  controllers/
+    app_controller.dart
   services/
     purchase_service.dart
 ```
+
+`PurchaseService` owns purchase infrastructure. When entitlement or premium-access state is consumed across unrelated routes, `AppController` owns the small GetX reactive projection used by the UI.
 
 If purchase state needs repository access or backend verification, the service may collaborate with `app/data/repositories/`.
 
@@ -60,26 +64,35 @@ It should usually not:
 
 ## Reactive State Rule
 
-Because the app may need to react immediately after a purchase succeeds, `PurchaseService` should expose a small reactive state surface.
+Separate purchase infrastructure state from app-wide presentation state.
 
-Typical examples:
+`PurchaseService` should own store-facing coordination and expose domain-friendly snapshots, streams, or callbacks without requiring feature controllers to understand the store SDK.
 
-- store availability
-- loading state for product queries
-- purchase-in-progress state
-- last purchase result
+When purchase entitlement, premium access, or owned-product state is consumed across unrelated routes, project the shared reactive state through `AppController`.
+
+Typical app-wide reactive state may include:
+
 - current entitlement snapshot
+- premium-access flag
 - owned product ids
+- store availability when many routes care about it
+- purchase-in-progress state only when it has meaningful app-wide UI impact
 
-In a GetX architecture, this often means exposing small `Rx` fields such as:
+Prefer this direction:
 
-- `RxBool isStoreAvailable`
-- `RxBool isPurchasing`
-- `RxnString lastPurchasedProductId`
-- `RxSet<String> ownedProductIds`
-- `Rxn<AppFailure> lastPurchaseError`
+```text
+InAppPurchase SDK
+      ↓
+PurchaseService
+      ↓
+AppController
+      ↓
+multiple routes / features
+```
 
-Keep this state derived and focused. Do not dump the entire purchase subsystem into one giant reactive object.
+Do not create separate entitlement observables in every feature controller.
+
+Keep `AppController` focused on the small presentation snapshot. Store connection, product loading, `purchaseStream`, restore logic, verification, and `completePurchase(...)` remain in `PurchaseService`.
 
 ## API Shape Rule
 
@@ -300,15 +313,16 @@ Treat this as a required part of the purchase flow, not an optional cleanup step
 
 Features may:
 
-- request product lists from the service
-- trigger buy actions through the service
-- read derived purchase state
+- request product lists from the service or an appropriate feature controller
+- trigger buy actions through the service or a small delegating app-level action
+- read shared entitlement state from `AppController` when that state is app-wide
 
 Features should not:
 
 - own the purchase stream subscription
 - directly coordinate transaction completion
 - duplicate restore logic across multiple screens
+- maintain independent copies of app-wide entitlement state
 
 ## Decision Rule
 
@@ -319,7 +333,7 @@ When unsure:
 3. identify whether the product is consumable, non-consumable, or subscription
 4. choose local-only or backend-confirmed entitlement architecture explicitly
 5. define a stable product-id naming convention
-6. expose only the minimal reactive purchase state needed by the app
+6. expose only the minimal shared reactive purchase state through `AppController` when multiple unrelated routes need it
 7. keep purchase APIs explicit with `productId` or `ProductDetails` input
 8. keep one listener for `purchaseStream`
 9. centralize entitlement refresh and restore handling
