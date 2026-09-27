@@ -111,6 +111,9 @@ Do not create a new text style every time a screen needs emphasis. Reuse and sli
 Use these constraints by default:
 
 - avoid "container hell": do not nest more than two decorative `Container` layers without a strong reason
+- also avoid wrapper hell: when `ConstrainedBox` + `DecoratedBox` + `Padding` + `Center` only describe one visual box, consider one `Container` with `constraints`, `decoration`, `padding`, and `alignment`
+- keep separate wrappers when they represent meaningful semantics, interaction, animation, clipping, scrolling, or repaint boundaries
+- optimize source readability and layout intent first; do not assume fewer wrapper widgets automatically means a significant runtime performance win
 - prefer `SizedBox`, `Padding`, `Divider`, and layout widgets over wrapping everything in `BoxDecoration`
 - prefer semantic widgets such as `Card`, `CircleAvatar`, `AppBar`, `TextButton`, and `IconButton`
 - if semantic widgets are not enough, create base components in `app/design_system/components/` instead of rebuilding raw boxes everywhere
@@ -118,6 +121,8 @@ Use these constraints by default:
 - nested rounded surfaces must use concentric radii: inner radius should usually equal outer radius minus the surrounding padding
 - prefer content density over decorative frames
 - remove unnecessary borders, shadows, and visual chrome
+- add shadows only when they communicate elevation or separation; prefer border/surface contrast first
+- keep custom shadows narrow and restrained: low visual intensity, modest blur, little or no spread, and no large colored glow unless the visual direction explicitly requires it
 
 Read [references/design-system-rules.md](references/design-system-rules.md) for the detailed constraints.
 
@@ -160,6 +165,8 @@ Before wrapping up:
 - confirm colors come from roles, not ad-hoc values
 - confirm typography hierarchy is consistent
 - confirm the screen does not rely on container stacking for visual structure
+- confirm common single-box layout concerns were not split across unnecessary `ConstrainedBox` / `DecoratedBox` / `Padding` / `Center` layers
+- confirm custom shadows do not bleed excessively into nearby surfaces or create a muddy / tinted appearance
 - confirm semantic Flutter widgets or design-system base components are used where appropriate
 - confirm feature-specific widgets were not promoted into the design system prematurely
 - confirm shadows and borders are minimal and intentional
