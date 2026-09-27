@@ -407,6 +407,10 @@ Before wrapping up:
 - confirm enum/sealed state is simpler than the boolean alternative and no Freezed/codegen was introduced just for simple state
 - confirm names are precise but concise and do not repeat class/file context unnecessarily
 - confirm controller and service methods use guard clauses / early returns to avoid unnecessary nesting
+- confirm the implementation is no larger than necessary for the actual business logic
+- remove speculative safe-checks for states already made impossible by types, bindings, or established invariants
+- keep validation at real boundaries such as user input, API data, persisted legacy data, deep links, platform callbacks, and optional values
+- review sequential `await` chains and use `Future.wait` when independent async work can safely run concurrently
 - confirm short one-statement `if` guards remain compact when readability is clear
 - confirm every unexpected caught exception is logged or reported with error and stack trace
 - confirm error logs carry useful context such as `ClassName.methodName` and are not duplicated at every layer
@@ -479,6 +483,9 @@ When using this skill, finish with a short summary that includes:
 - Resolve dependencies at composition boundaries; inject them into controllers and services.
 - Required GetX registrations should fail fast; do not hide wiring bugs with routine `Get.isRegistered` checks.
 - Prefer guard clauses and early returns over nested control flow.
+- Prefer minimum sufficient code: fewer lines and branches when they solve the same problem just as clearly.
+- Safety checks belong at real failure boundaries; do not bury business logic under speculative impossible-state handling.
+- Independent async work should run concurrently with `Future.wait` when ordering and shared-state constraints do not require serialization.
 - Keep short single-statement guards compact when they remain obvious.
 - A caught unexpected exception must be observable: log/report `error` and `stackTrace` with useful call-site context.
 - Keep `BuildContext` in the widget layer.
