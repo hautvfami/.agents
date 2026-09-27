@@ -181,7 +181,6 @@ convert_one() {
 
   local tmp
   tmp="$(mktemp "${TMPDIR:-/tmp}/flutter-assets-audio.XXXXXX")"
-  trap 'rm -f "$tmp"' RETURN
 
   local args=(
     -hide_banner
