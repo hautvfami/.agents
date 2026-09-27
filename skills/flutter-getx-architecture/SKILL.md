@@ -1,6 +1,6 @@
 ---
 name: flutter-getx-architecture
-description: Build or refactor Flutter apps that use GetX with clear module boundaries, disciplined dependency injection, practical reactive state, and a strict API stack based on `retrofit`, `json_serializable`, and `result_dart`. Use when Codex needs to organize GetX features, split controllers and views, add bindings, standardize navigation and dependency setup, or stop GetX usage from spreading chaotically across the app.
+description: Build or refactor Flutter apps that use GetX with clear module boundaries, disciplined dependency injection, practical reactive state, and a lightweight API stack based on `retrofit` and `json_serializable`, adding repositories, typed results, or deeper domain layers only when the project complexity justifies them. Use when Codex needs to organize GetX features, split controllers and views, add bindings, standardize navigation and dependency setup, or stop GetX usage from spreading chaotically across the app.
 ---
 
 # Flutter GetX Architecture
@@ -117,15 +117,16 @@ Do not assume folder location defines DI ownership. A file under `app/services/`
 Controllers should usually:
 
 - hold screen state
-- call use-case, repository, or service methods
+- call a typed Retrofit API directly for simple remote-only flows, or call a repository/service when that layer adds real value
 - expose reactive fields for the view
 - translate user actions into app behavior
 
 Controllers should usually not:
 
 - render widget trees
-- contain raw HTTP code
-- parse JSON directly unless the app is very small
+- use raw `Dio` / `http` request construction
+- manually parse JSON that Retrofit + `json_serializable` should handle
+- coordinate complex cache, offline-sync, multi-source, or cross-feature workflows inline
 - become god objects that manage multiple unrelated screens
 
 Async lifecycle hygiene:
@@ -151,33 +152,75 @@ For state used across unrelated routes, promote only the shared reactive project
 
 Read [references/dart-code-conventions.md](references/dart-code-conventions.md) for the full Dart/GetX code conventions, including private APIs, `final`/`const`, dependency resolution, `BuildContext` boundaries, typed data, state modeling, naming, imports, class modifiers, module exports, and app-wide state.
 
-### 6. Enforce the API stack: `retrofit` + `json_serializable` + `result_dart`
+### 6. Use the lightest API architecture that fits the feature
 
-For networked features, API access must use:
+For networked features, use:
 
-- `retrofit` for REST client declarations
+- `retrofit` for declarative typed REST clients
 - `json_serializable` for request and response model mapping
-- `result_dart` for repository and app-facing success or failure flows
 - generated `*.g.dart` and Retrofit client files via `build_runner`
+- `result_dart` when a repository/service boundary benefits from an explicit typed success/failure contract; do not require it for every trivial direct API call
 
-Prefer this flow:
+Start with the shallowest useful flow.
 
-- controller calls repository
-- repository calls shared Retrofit data source or API client
-- Retrofit client returns DTO or a generic response envelope model
-- `json_serializable` handles `fromJson` and `toJson`
-- repository converts transport success or failure into `ResultDart<T, AppFailure>` or the project's equivalent typed failure contract
+For a simple remote-only feature, this is valid:
+
+```text
+View
+  ↓
+Controller
+  ↓
+Retrofit API
+  ↓
+Request / Response models
+```
+
+The controller may call an injected typed Retrofit API directly when:
+
+- the flow is simple
+- there is one remote data source
+- Retrofit already returns the typed model the screen needs
+- there is no meaningful cache/offline/sync policy
+- there is no reused business orchestration that deserves its own owner
+
+Do not add a repository, use case, data-source interface, mapper, or domain entity merely to satisfy an architecture template.
+
+Add a repository when it provides a real data boundary, for example:
+
+- coordinating Retrofit + Drift
+- cache policy or offline-first behavior
+- normalizing failures across multiple endpoints or sources
+- hiding where data comes from
+- sharing non-trivial data behavior across features
+
+Add a service or use case when it owns a meaningful business workflow across multiple operations or dependencies. A use case that only forwards one call to a repository is normally unnecessary.
+
+Architecture may deepen with complexity:
+
+```text
+Simple remote
+Controller → Retrofit
+
+Data boundary needed
+Controller → Repository → Retrofit
+
+Local + remote
+Controller → Repository → Retrofit + Drift
+
+Complex business/sync flow
+Controller → Service / UseCase → Repository → Remote + Local / SDK
+```
 
 Avoid:
 
 - raw `Dio` or `http` calls inside controllers
 - manual `Map<String, dynamic>` parsing in controllers or views
 - handwritten serializer boilerplate when `json_serializable` should own it
-- mixing transport DTOs directly with unrelated UI state when a mapping boundary is needed
-- naming a custom generic wrapper `Response<T>` because it conflicts with `dio.Response`
-- throwing ad-hoc exceptions through controllers when a typed result would keep error handling explicit
+- ceremonial forwarding layers that add no policy, mapping, reuse, orchestration, or boundary
+- forcing DTO → entity mapping when both shapes are effectively identical and no domain isolation is needed
+- forcing repository interfaces when there is only one implementation and no real substitution or boundary requirement
 
-Read [references/retrofit-json-serialization-rules.md](references/retrofit-json-serialization-rules.md) for the required structure and generation flow.
+Read [references/retrofit-json-serialization-rules.md](references/retrofit-json-serialization-rules.md) for the progressive API architecture rules.
 
 ### 7. Choose local persistence deliberately: `shared_preferences` or `drift`
 
@@ -402,7 +445,7 @@ Before wrapping up:
 - confirm missing required registration fails fast instead of silently skipping behavior
 - confirm `BuildContext` does not leak into controllers, services, repositories, or DAOs
 - confirm avoidable `dynamic`, unnecessary `late`, and exposed mutable collections are removed
-- confirm dependencies flow View → Controller → Repository/Service → API/DAO/SDK without reverse imports
+- confirm dependencies flow downward without reverse imports; simple remote flows may be View → Controller → Retrofit, while deeper flows may add Repository/Service only when justified
 - confirm derived state is not duplicated as separately synchronized reactive fields
 - confirm enum/sealed state is simpler than the boolean alternative and no Freezed/codegen was introduced just for simple state
 - confirm names are precise but concise and do not repeat class/file context unnecessarily
@@ -431,8 +474,11 @@ Before wrapping up:
 - confirm truly cross-feature reactive state such as auth/session or purchase entitlement is not duplicated across feature controllers
 - confirm app-wide state lives in a small app-level controller while SDK/API/storage coordination stays in services and repositories
 - confirm API clients use `retrofit`
-- confirm JSON models use `json_serializable`
-- confirm repositories return explicit results instead of leaking transport exceptions upward
+- confirm JSON request/response models use `json_serializable`
+- confirm simple typed Retrofit flows were not expanded with ceremonial repository/use-case layers
+- confirm repositories exist only where they add data policy, failure normalization, reuse, cache/offline behavior, or multiple-source coordination
+- confirm use cases/services contain real business orchestration instead of forwarding one call
+- confirm `result_dart` is used where an explicit typed result boundary adds value rather than forced onto every trivial API call
 - confirm local storage choice matches data size and volatility
 - confirm assets are accessed through generated APIs instead of raw strings
 - confirm environment values come from `envied` instead of ad-hoc constants
@@ -495,11 +541,13 @@ When using this skill, finish with a short summary that includes:
 - A caught unexpected exception must be observable: log/report `error` and `stackTrace` with useful call-site context.
 - Keep `BuildContext` in the widget layer.
 - Avoid `dynamic`, unnecessary `late`, and externally mutable internal collections.
-- Preserve one-way dependencies: View → Controller → Repository/Service → API/DAO/SDK.
+- Preserve one-way dependencies, but let architecture depth follow complexity: Controller → Retrofit is valid for simple typed remote flows.
 - Prefer derived getters over duplicated state.
 - Use enum or a small sealed hierarchy only when it makes state simpler; do not add Freezed/codegen for simple state.
 - Names should be precise and short enough to scan; do not repeat obvious class or file context.
 - Prefer simple concrete code over premature base classes or generic abstractions.
+- Architecture grows with real complexity; do not create repository/use-case/domain layers as ceremony.
+- A layer must remove complexity from its caller or establish a useful boundary; pure forwarding layers are usually noise.
 - Keep Flutter widget trees shallow when wrappers add no distinct semantics or behavior; consolidate one visual box when it improves readability.
 - Prefer Flutter's normal constraint system and flex primitives before layout-time builders or intrinsic measurement.
 - `LayoutBuilder` is for genuine constraint-dependent composition; intrinsic sizing is a last resort, especially in repeated/deep trees.
@@ -510,7 +558,7 @@ When using this skill, finish with a short summary that includes:
 - Use Dart dot shorthand when the context type is obvious and the project language version supports it.
 - Global state is for cross-feature app-lifecycle state, not feature-local convenience.
 - `AppController` may expose shared auth/session and entitlement state; underlying SDK and data coordination stays in services and repositories.
-- API contracts use `retrofit`; JSON mapping uses `json_serializable`; repository flows use `result_dart`.
+- API contracts use `retrofit`; JSON mapping uses `json_serializable`; repositories and `result_dart` are introduced only when they create a useful boundary.
 - Small stable keys use `shared_preferences`; structured or evolving local data uses `drift`.
 - Assets use `flutter_gen`, not hardcoded paths.
 - App environment uses `envied`, not duplicated constants.
