@@ -259,11 +259,14 @@ Keep Drift below the repository boundary:
 - do not run raw Drift queries from controllers or views
 - do not leak generated Drift rows, companions, or query objects into presentation code
 
-Treat schema changes as versioned changes:
+Treat database schema versions as release boundaries:
 
-- bump `schemaVersion` whenever a shipped schema changes
-- prefer `dart run drift_dev make-migrations` to generate migration helpers and tests
-- keep migration code explicit and test upgrades from older schema versions
+- track the last schema version that actually shipped to users
+- while changes are still unreleased, accumulate them into one pending release migration instead of bumping `schemaVersion` after every edit
+- if the next schema version was already bumped in the current unreleased work, keep refining that same migration rather than bumping again
+- before release, bump once if needed, run `dart run drift_dev make-migrations`, review the generated steps, and test upgrades from supported shipped schemas
+- keep a release-note/TODO entry for pending schema migration work
+- for apps with persistent production data, keep a small app-version → DB-schema history or reuse an existing reliable changelog
 - never rely on destructive recreation for production user data unless the product explicitly permits data loss
 
 Avoid:
@@ -486,6 +489,9 @@ Before wrapping up:
 - confirm repeated API `try/catch` was solved with the smallest useful mechanism, which may be a mapper/helper/interceptor instead of a result abstraction
 - confirm multi-API chains use the clearest orchestration style rather than mechanically composing result wrappers
 - confirm local storage choice matches data size and volatility
+- confirm Drift `schemaVersion` was not bumped repeatedly for unreleased intermediate schema edits
+- confirm pending schema changes are consolidated against the last actually shipped schema
+- confirm release notes/TODOs record pending migration work and the app-version → DB-schema history is updated when applicable
 - confirm assets are accessed through generated APIs instead of raw strings
 - confirm environment values come from `envied` instead of ad-hoc constants
 - confirm `worker_manager` is used only for work heavy enough to justify isolate complexity
@@ -566,6 +572,7 @@ When using this skill, finish with a short summary that includes:
 - `AppController` may expose shared auth/session and entitlement state; underlying SDK and data coordination stays in services and repositories.
 - API contracts use `retrofit`; JSON mapping uses `json_serializable`; repositories and `result_dart` are optional tools and stay only when they make the overall flow simpler.
 - Small stable keys use `shared_preferences`; structured or evolving local data uses `drift`.
+- Drift schema versions follow shipped release boundaries, not every development edit; amend the pending migration until it actually ships.
 - Assets use `flutter_gen`, not hardcoded paths.
 - App environment uses `envied`, not duplicated constants.
 - `worker_manager` is for heavy repeated compute, not default async work.
