@@ -909,6 +909,93 @@ Examples include parsers, validators, or small conversions that do not fit natur
 
 Do not turn `helpers/` into a dumping ground for unrelated code.
 
+## Widget Tree Depth Rule
+
+Keep widget trees shallow enough to scan quickly.
+
+When several wrappers only combine common layout and decoration concerns, consider collapsing them into one widget that already supports those concerns.
+
+For example, review code such as:
+
+```dart
+ConstrainedBox(
+  constraints: constraints,
+  child: DecoratedBox(
+    decoration: decoration,
+    child: Padding(
+      padding: padding,
+      child: Center(
+        child: content,
+      ),
+    ),
+  ),
+)
+```
+
+When the same behavior is clear and correct with one `Container`, prefer the flatter form:
+
+```dart
+Container(
+  constraints: constraints,
+  decoration: decoration,
+  padding: padding,
+  alignment: .center,
+  child: content,
+)
+```
+
+Good candidates for consolidation include combinations of:
+
+- constraints
+- padding
+- alignment
+- foreground/background decoration
+- width and height
+- margin when it belongs to the same visual box
+
+Do not merge widgets mechanically.
+
+Keep dedicated widgets when they communicate an important semantic or behavioral boundary, such as:
+
+- `SafeArea`
+- `Hero`
+- `AnimatedBuilder` or other animation boundaries
+- `RepaintBoundary`
+- scrolling and sliver widgets
+- clipping when clipping behavior is intentional
+- interaction widgets such as `GestureDetector`, `InkWell`, or `FocusableActionDetector`
+- layout widgets whose behavior would become less obvious after consolidation
+
+The goal is a shallower and more readable source tree. Do not claim a `Container` automatically provides a meaningful performance improvement; Flutter may still compose multiple layout and paint behaviors internally.
+
+Prefer the representation that makes layout intent obvious with the fewest unnecessary source-level wrappers.
+
+## Shadow Restraint Rule
+
+Do not add `BoxShadow` by default.
+
+A shadow should communicate a real visual relationship such as elevation, floating hierarchy, separation from the background, or an interactive surface that genuinely needs depth.
+
+Before adding a shadow, consider whether these are sufficient:
+
+- surface color contrast
+- a subtle border
+- spacing
+- Material elevation
+- typography or content hierarchy
+
+If `BoxShadow` is appropriate:
+
+- keep opacity restrained
+- avoid exaggerated `spreadRadius`
+- avoid unnecessarily large `blurRadius`
+- keep offset intentional and consistent with the app's light/elevation language
+- prefer a small shared set of shadow presets over ad-hoc values per widget
+
+Avoid broad colored shadows that bleed far outside the component and make adjacent surfaces look muddy or tinted.
+
+Use large or stylized shadows only when the product's visual direction explicitly calls for that effect.
+
 ## Widget Extraction Rule
 
 When a meaningful UI block deserves its own identity, prefer extracting a `StatelessWidget` or `StatefulWidget` instead of a helper function returning `Widget`.
@@ -1035,6 +1122,10 @@ Before finishing Dart or Flutter changes:
 - use mixins only for genuine shared instance behavior, not generic utility dumping grounds
 - keep helpers pure, stateless, and intentionally scoped
 - extract meaningful UI blocks as widgets when it improves structure
+- reduce unnecessary widget nesting when one clear widget can express the same constraints, padding, alignment, and decoration
+- keep semantic, interaction, animation, scrolling, clipping, and repaint boundaries explicit when they add real behavior
+- do not add `BoxShadow` without a clear visual hierarchy reason
+- keep shadow blur, spread, opacity, and color restrained unless the product explicitly requires a stylized effect
 - keep imports sorted, minimal, and free of third-party `src/` paths
 - use class modifiers only when they communicate a useful boundary
 - export only intentional module APIs
