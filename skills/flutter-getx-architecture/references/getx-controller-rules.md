@@ -201,9 +201,13 @@ try {
 }
 ```
 
-If a repository/service already converts known infrastructure exceptions into typed `AppFailure` results, controllers should handle the typed result instead of wrapping every call in redundant `try/catch`.
+If a repository/service already converts known infrastructure exceptions into typed `AppFailure` results, controllers may consume that typed result instead of wrapping every call in redundant `try/catch`.
+
+Do not require a typed result when direct `async/await + try/catch` is shorter and clearer. `result_dart` is a tool for reducing repeated error handling, not a mandatory controller contract.
 
 For a direct Retrofit flow, the controller may catch the transport exception at that boundary, log it with `error` and `stackTrace`, and map it into presentation error state. Do not add a repository solely to relocate a trivial `try/catch`.
+
+For sequential multi-API flows, prefer straightforward async orchestration when it is easier to trace than nested/composed result operators. If error handling repeats, extract only the repeated part rather than automatically wrapping every call in `ResultDart`.
 
 Do not log the same error again at every layer unless each log adds genuinely different operational context.
 
