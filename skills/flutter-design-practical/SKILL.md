@@ -72,14 +72,14 @@ If a component is clearly part of the app's base UI language, create it in the d
 
 ### 3. Apply a practical spacing and radius system
 
-Use an 8pt spacing rhythm as the default layout language. Use 4dp only for tight micro-adjustments.
+Use an 8pt spacing rhythm as the default layout language, with 4dp for common micro-adjustments.
 
 This means:
 
-- common layout gaps should usually be `8, 16, 24, 32`
-- `4` is acceptable for tiny internal adjustments, not as the dominant rhythm of the UI
-- avoid random values such as `6, 10, 12, 14, 18, 20, 22` unless the current app already depends on them and a migration is out of scope
-- border radius should come from a small approved set, not arbitrary values
+- common layout gaps should usually come from a small repeated token set such as `8, 16, 24, 32`
+- values outside that default are acceptable when an actual component constraint, platform convention, optical alignment, or existing design system requires them
+- avoid random one-off tuning values with no reusable reason
+- border radius should come from a small project vocabulary, while allowing justified design-specific exceptions
 
 For the default approved scales, read [references/design-system-rules.md](references/design-system-rules.md).
 
@@ -167,6 +167,7 @@ When building or refactoring a screen:
 - check RTL friendliness when using directional spacing or alignment
 - check tablet or large-width behavior if the layout obviously stretches
 - check text and background contrast
+- check whether large raster images are being decoded far above their rendered size; prefer resized sources or appropriate decode sizing for thumbnail use
 - avoid neon, cyber, or overly loud gradients unless that is the app's explicit visual direction
 
 Prefer mobile-first layouts that scale upward. Do not over-engineer desktop-style breakpoints unless the product needs them.
@@ -176,8 +177,8 @@ Prefer mobile-first layouts that scale upward. Do not over-engineer desktop-styl
 Before wrapping up:
 
 - remove arbitrary values if a token can represent them
-- confirm spacing uses the approved scale
-- confirm radius uses the approved scale
+- confirm spacing follows the project's token vocabulary or has a concrete reason for an exception
+- confirm radius follows the project's small reusable vocabulary or has a concrete design reason for an exception
 - confirm colors come from roles, not ad-hoc values
 - confirm typography hierarchy is consistent
 - confirm the screen does not rely on container stacking for visual structure
