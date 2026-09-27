@@ -415,6 +415,8 @@ Before wrapping up:
 - confirm every unexpected caught exception is logged or reported with error and stack trace
 - confirm error logs carry useful context such as `ClassName.methodName` and are not duplicated at every layer
 - confirm meaningful UI blocks are extracted as widgets rather than large widget-returning helpers where appropriate
+- confirm widget trees avoid unnecessary source-level wrapper depth when one clear widget can express the same visual box
+- confirm custom shadows are intentional, restrained, and do not create wide muddy color bleed
 - confirm abstractions such as BaseRepository/BaseController/BaseService exist only when real repeated behavior justifies them
 - confirm repeated class-internal logic stays in private methods until real reuse justifies extraction
 - confirm reusable type-focused behavior uses extensions when that reads naturally
@@ -495,6 +497,8 @@ When using this skill, finish with a short summary that includes:
 - Use enum or a small sealed hierarchy only when it makes state simpler; do not add Freezed/codegen for simple state.
 - Names should be precise and short enough to scan; do not repeat obvious class or file context.
 - Prefer simple concrete code over premature base classes or generic abstractions.
+- Keep Flutter widget trees shallow when wrappers add no distinct semantics or behavior; consolidate one visual box when it improves readability.
+- Shadows express hierarchy, not decoration by default; keep custom blur/spread/color restrained.
 - Reuse should follow ownership: private method first, extension for type-focused behavior, mixin only for proven shared instance behavior.
 - Common date/time presentation formatting belongs in focused `DateTime` extensions; one-off formats may stay local.
 - Barrel files expose stable module APIs, not every implementation file.
