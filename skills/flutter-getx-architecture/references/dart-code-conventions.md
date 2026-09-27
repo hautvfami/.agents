@@ -973,6 +973,75 @@ Examples include parsers, validators, or small conversions that do not fit natur
 
 Do not turn `helpers/` into a dumping ground for unrelated code.
 
+## Build Method Rule
+
+Treat Flutter `build()` methods and builder callbacks as cheap, repeatable UI descriptions.
+
+A `build()` method may run frequently. Do not rely on it running only once.
+
+Avoid doing these directly in `build()`:
+
+- network or storage calls
+- creating async operations that should survive ordinary rebuilds
+- navigation, dialogs, analytics, logging side effects, or state mutation
+- repeatedly sorting, filtering, parsing, or transforming large collections when the input has not changed
+- expensive synchronous computation
+- creating lifecycle resources that should be owned and disposed elsewhere
+
+Prefer preparing state before build and letting build select and compose widgets.
+
+Small cheap expressions are fine. Do not extract trivial formatting, simple collection access, or obvious one-line conditions merely to make build look empty.
+
+### FutureBuilder Rule
+
+Within a GetX feature, do not reach for `FutureBuilder` by default.
+
+Prefer the controller to own screen/feature async work and expose the resulting loading/data/error state when that operation belongs to the feature lifecycle.
+
+Use `FutureBuilder` only when the Future is genuinely local to a small self-contained widget and introducing controller state would add more complexity than value.
+
+If `FutureBuilder` is justified, the Future must normally be obtained before `build()`, for example from `initState`, `didUpdateWidget`, or another stable owner.
+
+Avoid:
+
+```dart
+FutureBuilder(
+  future: api.loadProfile(),
+  builder: ...,
+)
+```
+
+when a parent rebuild would recreate and restart the asynchronous operation.
+
+Do not layer `FutureBuilder` on top of controller-owned GetX async state without a clear reason.
+
+The builder callback should only describe UI for the current snapshot. Do not trigger navigation, logging, writes, or other side effects from it.
+
+### StreamBuilder Rule
+
+`StreamBuilder` is acceptable when a widget genuinely consumes a stream directly and a controller-owned projection would add no value.
+
+As with `FutureBuilder`, do not create a new Stream in `build()` when the subscription should survive ordinary rebuilds. Obtain the Stream from a stable lifecycle owner.
+
+If the stream already feeds controller/GetX state that multiple widgets or routes consume, prefer one subscription at that state boundary rather than creating duplicate widget-level subscriptions.
+
+## Image Decode And Memory Rule
+
+Do not decode large raster images at full source resolution when the UI only displays a much smaller image.
+
+A high-resolution image is stored decoded in memory, so source dimensions matter even when the widget is visually small.
+
+Prefer this order:
+
+1. request an appropriately sized image variant from the backend/CDN when available
+2. give image widgets clear layout dimensions
+3. use `cacheWidth` / `cacheHeight` or an equivalent resize-aware image provider when a large raster source is displayed as a small thumbnail
+4. keep full-resolution decoding only when the UI genuinely needs that resolution, such as zooming or a full-screen image
+
+Do not apply tiny decode dimensions mechanically to images that will later expand or zoom.
+
+For responsive layouts, choose decode size according to the largest size the current presentation actually needs.
+
 ## Layout Cost Rule
 
 Prefer the simplest layout primitive that correctly expresses the constraint relationship.
@@ -1282,6 +1351,10 @@ Before finishing Dart or Flutter changes:
 - use mixins only for genuine shared instance behavior, not generic utility dumping grounds
 - keep helpers pure, stateless, and intentionally scoped
 - extract meaningful UI blocks as widgets when it improves structure
+- keep `build()` and builder callbacks free of avoidable expensive work and side effects
+- prefer controller-owned async state over `FutureBuilder` for normal GetX feature loading
+- when `FutureBuilder` / `StreamBuilder` is justified, keep its Future/Stream stable across ordinary rebuilds
+- avoid decoding oversized raster images when a much smaller display resolution is sufficient
 - reduce unnecessary widget nesting when one clear widget can express the same constraints, padding, alignment, and decoration
 - prefer `Expanded` / `Flexible` / simple constraints over `LayoutBuilder` when the layout does not actually depend on parent constraints
 - avoid `IntrinsicHeight` / `IntrinsicWidth` unless intrinsic measurement is genuinely necessary
