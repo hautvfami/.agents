@@ -320,30 +320,130 @@ Do not create `ProfileRepository` + `ProfileRepositoryImpl` mechanically when on
 
 ## Result Dart Rule
 
-Use `result_dart` when explicit typed failure handling improves a repository, service, or complex orchestration boundary.
+`result_dart` is optional.
 
-Good fit:
+Use it only when an explicit success/failure value makes the flow shorter, more consistent, or easier to reason about than ordinary async exception handling.
 
-```text
-Controller
-    ↓
-Repository / Service
-    ↓
-ResultDart<T, AppFailure>
+Good reasons to use it:
+
+- the same repository/service boundary repeatedly maps infrastructure errors into a small typed failure model
+- callers genuinely benefit from explicit success/failure branching
+- a shared operation is consumed by multiple callers that should not know transport exceptions
+- typed failure composition is clearer than repeated `try/catch`
+
+Example shape:
+
+```dart
+final result = await repository.profile();
+
+result.fold(
+  _showFailure,
+  _applyProfile,
+);
 ```
 
-Do not force `ResultDart` around every generated Retrofit method.
+Do not adopt `result_dart` merely because the package is available.
 
-A simple controller → Retrofit flow may catch unexpected transport errors at that boundary, log `error` + `stackTrace`, and map them into presentation error state.
+### Prefer Plain Async When It Is Simpler
+
+A direct API flow may be clearer with ordinary async code:
+
+```dart
+try {
+  final profile = await _api.profile();
+  _profile.value = profile;
+} catch (e, st) {
+  log(
+    'Failed to load profile',
+    name: 'ProfileController.load',
+    error: e,
+    stackTrace: st,
+  );
+
+  _error.value = true;
+}
+```
+
+Do not replace this with multiple result wrappers if the result-based version is longer or harder to scan.
+
+### Repeated Try/Catch Does Not Automatically Require ResultDart
+
+If API error handling repeats, first identify what is actually duplicated.
+
+Possible solutions include:
+
+- one small exception-to-message/failure mapper
+- a shared logging/error helper
+- a repository boundary for a group of calls
+- a Dio interceptor for transport concerns that truly belong there
+- `result_dart` when explicit typed success/failure is the clearest option
+
+Choose the smallest mechanism that removes the real duplication.
+
+Do not build a large result abstraction around code that only needs one reusable error mapper.
+
+### Chained API Calls
+
+Be especially careful when a feature calls several APIs in sequence.
+
+Do not force nested or heavily composed result code such as repeated `fold`, `flatMap`, `mapError`, or wrapper conversions if ordinary async orchestration is clearer.
+
+For example, this can be completely valid:
+
+```dart
+try {
+  final session = await _authApi.session();
+  final profile = await _profileApi.profile(session.userId);
+  final entitlement = await _purchaseApi.entitlement(session.userId);
+
+  _apply(profile, entitlement);
+} catch (e, st) {
+  log(
+    'Failed to load account',
+    name: 'AccountController._load',
+    error: e,
+    stackTrace: st,
+  );
+
+  _showError();
+}
+```
+
+If several calls are independent, review whether `Future.wait` is appropriate instead of chaining them sequentially.
+
+Use a service/repository/use case for the chain only when it owns meaningful business orchestration, reuse, transaction-like behavior, retry policy, or data coordination.
+
+### Decision Rule
+
+Prefer `result_dart` when:
+
+```text
+typed success/failure
++ less repeated handling
++ clearer caller code
+= simpler overall flow
+```
+
+Prefer plain `async/await + try/catch` when:
+
+```text
+few calls
++ obvious error handling
++ result composition adds wrappers/nesting
+= simpler direct flow
+```
+
+The metric is total code clarity, not adherence to one error-handling style.
 
 When using typed failures:
 
-- keep one coherent failure hierarchy
-- avoid wrapping `ResultDart` inside another generic success wrapper
+- keep one small coherent failure model
+- do not wrap every Retrofit method automatically
+- avoid converting exception → result → another result type without a real boundary
 - avoid logging the same failure at every layer
-- convert unexpected exceptions at the boundary that has enough context to classify them
+- stop using `result_dart` in a flow when it increases ceremony more than it reduces error-handling noise
 
-## Generation Rule
+## Generation Rule## Generation Rule
 
 After changing Retrofit clients or JSON models, run:
 
@@ -363,5 +463,5 @@ When adding or changing an API feature:
 4. inject the typed API directly into the controller if the flow is simple
 5. add a repository only when it introduces real data policy, reuse, mapping, failure normalization, or multiple-source coordination
 6. add a service/use case only when it owns meaningful business orchestration
-7. add `result_dart` when a typed result boundary makes that deeper flow clearer
+7. use `result_dart` only when it reduces repeated error handling or makes success/failure branching clearer than plain async code
 8. stop adding layers when the next layer would only forward the previous call
