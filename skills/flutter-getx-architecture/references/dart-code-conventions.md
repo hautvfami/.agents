@@ -197,6 +197,45 @@ and avoid scattering `Get.find()` through methods or leaf widgets.
 
 Dependency lookup should be visible near object construction so the dependency graph remains traceable.
 
+## GetX Registration Rule
+
+For required GetX dependencies, prefer fail-fast lookup.
+
+Use:
+
+```dart
+final appController = Get.find<AppController>();
+```
+
+Do not routinely guard required dependencies with:
+
+```dart
+if (Get.isRegistered<AppController>()) {
+  final appController = Get.find<AppController>();
+}
+```
+
+or:
+
+```dart
+if (!Get.isRegistered<AppController>()) return;
+```
+
+when the dependency is part of the required binding contract.
+
+If a required dependency was not registered, that is a wiring bug. Let the lookup fail close to the cause instead of silently skipping behavior and allowing the app to continue in an invalid state.
+
+Use `Get.isRegistered<T>()` only when registration is genuinely optional or when the code intentionally needs to inspect registration state, such as:
+
+- conditional setup
+- test setup or cleanup
+- lifecycle-specific teardown
+- optional integrations that are explicitly modeled as optional
+
+Do not use `isRegistered → find` as defensive boilerplate.
+
+Bindings should guarantee required dependencies before the route or controller needs them.
+
 ## BuildContext Boundary Rule
 
 Do not pass `BuildContext` into controllers, services, repositories, DAOs, or infrastructure objects.
@@ -485,6 +524,139 @@ Do not add `get` mechanically when it adds no meaning.
 
 Within a class whose context is already clear, prefer `load()` over `loadProfile()` if there is only one obvious resource being loaded. Use the longer name when multiple load operations exist and disambiguation is useful.
 
+## Guard Clause And Control Flow Rule
+
+Prefer early returns and guard clauses when they make the main execution path flatter and easier to scan.
+
+Prefer:
+
+```dart
+Future<void> submit() async {
+  if (_isLoading.value) return;
+  if (!_formIsValid()) return;
+
+  _isLoading.value = true;
+
+  try {
+    await _save();
+  } finally {
+    _isLoading.value = false;
+  }
+}
+```
+
+over deeply nested control flow:
+
+```dart
+Future<void> submit() async {
+  if (!_isLoading.value) {
+    if (_formIsValid()) {
+      _isLoading.value = true;
+
+      try {
+        await _save();
+      } finally {
+        _isLoading.value = false;
+      }
+    }
+  }
+}
+```
+
+Use guard clauses for:
+
+- invalid input
+- already-running work
+- missing optional data
+- empty collections when no work is needed
+- unsupported states
+- fast UI branches
+
+For a short single-statement `if`, prefer a compact one-line form when it remains easy to scan:
+
+```dart
+if (a > 3) return;
+if (isLoading) return const LoadingWidget();
+if (items.isEmpty) return const EmptyView();
+```
+
+Do not add braces around a trivial one-line guard merely by habit.
+
+Use braces when:
+
+- the branch contains multiple statements
+- the statement spans multiple lines
+- comments or debugging code may make the control flow ambiguous
+- nested conditions would become hard to scan
+- project formatting or lint rules require them
+
+The goal is flatter, clearer control flow, not minimizing line count at all costs.
+
+## Exception Logging Rule
+
+Do not swallow exceptions silently.
+
+When using `try/catch`, catch both the error and stack trace unless there is a specific reason not to:
+
+```dart
+try {
+  await _repository.refresh();
+} catch (e, st) {
+  log(
+    'Failed to refresh profile',
+    name: 'ProfileController._refresh',
+    error: e,
+    stackTrace: st,
+  );
+
+  rethrow;
+}
+```
+
+At minimum, unexpected caught exceptions should be observable through logging or the project's error-reporting layer.
+
+Prefer contextual log names in the form:
+
+```text
+ClassName.methodName
+```
+
+For private methods, including the underscore in the log name is acceptable when it helps trace the exact code path:
+
+```dart
+name: 'ProfileController._load'
+```
+
+Avoid:
+
+```dart
+try {
+  await work();
+} catch (_) {}
+```
+
+and avoid:
+
+```dart
+try {
+  await work();
+} catch (e) {
+  // ignored
+}
+```
+
+A catch block should normally do at least one intentional thing:
+
+- log the unexpected issue
+- map the exception into a typed failure
+- update meaningful error state
+- report it to the app's error-reporting service
+- rethrow when the current layer cannot handle it correctly
+
+If the exception is mapped to a known `AppFailure`, logging responsibility may live at the boundary that first converts or observes the unexpected exception. Do not log the same failure repeatedly at every layer.
+
+Expected control-flow outcomes should not be modeled as exceptions merely so they can be caught and logged.
+
 ## Reuse And Extraction Rule
 
 When logic repeats, consider extracting it, but choose the smallest abstraction that matches the ownership of the behavior.
@@ -734,7 +906,14 @@ Before finishing Dart or Flutter changes:
 - avoid unnecessary `late`
 - remove avoidable `dynamic`
 - resolve dependencies at bindings/bootstrap and inject them through constructors
+- do not guard required GetX dependencies with `Get.isRegistered` before `Get.find`; fail fast on invalid binding setup
+- use `Get.isRegistered` only for intentionally optional or lifecycle-specific registration checks
 - keep `BuildContext` out of controllers, services, repositories, and DAOs
+- prefer guard clauses and early returns over deeply nested `if` blocks
+- keep trivial single-statement guards compact when readability remains clear
+- never leave unexpected `catch` blocks silent; capture `(e, st)` and log or report the issue
+- use contextual error log names such as `ClassName.methodName`
+- avoid duplicate logging of the same failure across multiple layers
 - do not expose mutable internal collections
 - keep the dependency direction View → Controller → Repository/Service → API/DAO/SDK
 - derive state instead of duplicating it
