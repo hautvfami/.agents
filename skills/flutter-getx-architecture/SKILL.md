@@ -159,7 +159,7 @@ For networked features, use:
 - `retrofit` for declarative typed REST clients
 - `json_serializable` for request and response model mapping
 - generated `*.g.dart` and Retrofit client files via `build_runner`
-- `result_dart` when a repository/service boundary benefits from an explicit typed success/failure contract; do not require it for every trivial direct API call
+- `result_dart` only when it reduces repeated error handling or makes success/failure branching clearer than plain `async/await`; never treat it as a required app-wide pattern
 
 Start with the shallowest useful flow.
 
@@ -219,6 +219,9 @@ Avoid:
 - ceremonial forwarding layers that add no policy, mapping, reuse, orchestration, or boundary
 - forcing DTO → entity mapping when both shapes are effectively identical and no domain isolation is needed
 - forcing repository interfaces when there is only one implementation and no real substitution or boundary requirement
+- forcing `result_dart` around every API call
+- replacing a short readable `try/catch` with longer nested/composed result code
+- using repeated `fold` / `flatMap` / wrapper conversion chains when ordinary async orchestration is easier to follow
 
 Read [references/retrofit-json-serialization-rules.md](references/retrofit-json-serialization-rules.md) for the progressive API architecture rules.
 
@@ -479,6 +482,9 @@ Before wrapping up:
 - confirm repositories exist only where they add data policy, failure normalization, reuse, cache/offline behavior, or multiple-source coordination
 - confirm use cases/services contain real business orchestration instead of forwarding one call
 - confirm `result_dart` is used where an explicit typed result boundary adds value rather than forced onto every trivial API call
+- confirm `result_dart` actually reduces boilerplate or clarifies success/failure flow; remove it from flows where it makes code longer or harder to trace
+- confirm repeated API `try/catch` was solved with the smallest useful mechanism, which may be a mapper/helper/interceptor instead of a result abstraction
+- confirm multi-API chains use the clearest orchestration style rather than mechanically composing result wrappers
 - confirm local storage choice matches data size and volatility
 - confirm assets are accessed through generated APIs instead of raw strings
 - confirm environment values come from `envied` instead of ad-hoc constants
@@ -558,7 +564,7 @@ When using this skill, finish with a short summary that includes:
 - Use Dart dot shorthand when the context type is obvious and the project language version supports it.
 - Global state is for cross-feature app-lifecycle state, not feature-local convenience.
 - `AppController` may expose shared auth/session and entitlement state; underlying SDK and data coordination stays in services and repositories.
-- API contracts use `retrofit`; JSON mapping uses `json_serializable`; repositories and `result_dart` are introduced only when they create a useful boundary.
+- API contracts use `retrofit`; JSON mapping uses `json_serializable`; repositories and `result_dart` are optional tools and stay only when they make the overall flow simpler.
 - Small stable keys use `shared_preferences`; structured or evolving local data uses `drift`.
 - Assets use `flutter_gen`, not hardcoded paths.
 - App environment uses `envied`, not duplicated constants.
