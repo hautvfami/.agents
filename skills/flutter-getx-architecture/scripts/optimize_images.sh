@@ -144,6 +144,7 @@ convert_one() {
   trap 'rm -f "$tmp"' RETURN
 
   if ! cwebp -quiet -metadata none -q "$quality" "$src" -o "$tmp"; then
+    rm -f "$tmp"
     echo "FAIL convert: $src" >&2
     return 1
   fi
@@ -154,17 +155,18 @@ convert_one() {
   saving="$(saving_percent "$before" "$after")"
 
   if ! meets_threshold "$saving"; then
+    rm -f "$tmp"
     echo "KEEP $src | ${before}B -> ${after}B | saving ${saving}% (< ${min_saving}%)"
     return
   fi
 
   if [[ "$mode" == "check" ]]; then
+    rm -f "$tmp"
     echo "CANDIDATE $src -> $dest | ${before}B -> ${after}B | saving ${saving}%"
     return
   fi
 
   mv "$tmp" "$dest"
-  trap - RETURN
 
   if [[ "$delete_original" == true ]]; then
     rm -f "$src"
