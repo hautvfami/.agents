@@ -166,7 +166,7 @@ fi
 convert_one() {
   local src="$1"
   local ext="${src##*.}"
-  ext="${ext,,}"
+  ext="$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]')"
   local dest="${src%.*}.m4a"
 
   if [[ "$ext" == "mp3" && "$mode" == "write" && "$allow_lossy_transcode" != true ]]; then
