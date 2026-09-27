@@ -303,11 +303,57 @@ Do not let untyped values flow into:
 
 Prefer explicit types that allow analyzer and IDE tooling to detect mistakes.
 
-## Dependency Direction Rule
+## Progressive Architecture Rule
 
-Keep dependencies moving in one direction:
+Do not apply Clean Architecture as a fixed file/folder template.
+
+Architecture depth should follow actual complexity.
+
+Valid examples:
 
 ```text
+simple remote:
+Controller → Retrofit API
+
+data boundary:
+Controller → Repository → Retrofit API
+
+local + remote:
+Controller → Repository → Retrofit API + Drift DAO
+
+complex workflow:
+Controller → Service / UseCase → Repository → Remote + Local / SDK
+```
+
+A repository, interface, use case, mapper, domain entity, or data-source abstraction must earn its place by doing at least one of these:
+
+- removing meaningful complexity from the caller
+- owning a policy or invariant
+- coordinating multiple dependencies or data sources
+- providing real reuse
+- creating a boundary that needs independent evolution or substitution
+
+Avoid ceremonial layers that only forward calls or copy fields.
+
+Do not require every feature in the same app to have the same number of layers.
+
+A simple settings/API screen and an offline synchronization feature may legitimately have very different architecture depths.
+
+Generated tooling should own mechanical work. Handwritten architecture should own actual complexity.
+
+## Dependency Direction Rule
+
+Keep dependencies moving downward. The intermediate layers are optional:
+
+```text
+View
+  ↓
+Controller
+  ↓
+Retrofit API
+
+or, when justified:
+
 View
   ↓
 Controller
@@ -1206,6 +1252,9 @@ Before finishing Dart or Flutter changes:
 - use concise names without repeating class/file context
 - use predicate-style boolean names
 - avoid premature base classes and generic abstractions
+- avoid ceremonial repository/use-case/interface/mapper layers that only forward calls or copy fields
+- allow controllers to consume injected typed Retrofit APIs directly for simple remote-only flows
+- deepen architecture only when data policy, multiple sources, reuse, business orchestration, or independent boundaries justify it
 - keep repeated logic local as a private method until real cross-file reuse appears
 - prefer extensions when reusable behavior naturally belongs to an existing type
 - keep common date/time display formatting in `DateTime` extensions instead of scattering raw `DateFormat` patterns
