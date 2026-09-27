@@ -108,7 +108,7 @@ Do not force bindings into feature folders if centralized bindings make route co
 Keep the DI boundary explicit:
 
 - use GetX bindings for GetX controllers, GetX stores, and GetX-specific services
-- use `get_it` for app infrastructure such as `Dio`, Retrofit APIs, env config, preferences wrappers, Realm setup, repositories, and other non-GetX dependencies
+- use `get_it` for app infrastructure such as `Dio`, Retrofit APIs, env config, preferences wrappers, Drift databases and DAOs, repositories, and other non-GetX dependencies
 
 Do not assume folder location defines DI ownership. A file under `app/services/` may still belong to `get_it` if it is not GetX-coupled.
 
@@ -167,12 +167,12 @@ Avoid:
 
 Read [references/retrofit-json-serialization-rules.md](references/retrofit-json-serialization-rules.md) for the required structure and generation flow.
 
-### 7. Choose local persistence deliberately: `shared_preferences` or `realm`
+### 7. Choose local persistence deliberately: `shared_preferences` or `drift`
 
 For local persistence, prefer only these two storage directions unless the user explicitly asks otherwise:
 
 - `shared_preferences` for small, simple, stable key-value settings that need quick access
-- `realm` for dynamic user data, larger local datasets, or data shapes that will likely grow over time
+- `drift` for structured local data, relational data, larger datasets, offline caches, and data that needs typed queries or migrations
 
 Prefer `shared_preferences` for:
 
@@ -184,18 +184,36 @@ Prefer `shared_preferences` for:
 
 If the app already uses `get_it` or `injectable` for bootstrap dependencies, it is acceptable to pre-resolve the shared preferences wrapper there so app-level settings are ready before first use.
 
-Prefer `realm` for:
+Prefer `drift` for:
 
 - user-generated content
-- cached profiles, feeds, drafts, or history
-- structured objects or collections
-- data that changes often or may later require richer queries
+- cached profiles, feeds, drafts, history, or offline data
+- structured records with relationships or indexes
+- data that changes often or requires filtering, ordering, joins, transactions, or reactive queries
+- persisted models whose schema will evolve and therefore require explicit migrations
+
+Keep Drift below the repository boundary:
+
+- define one app-level database such as `AppDatabase`
+- keep tables and DAOs under `app/storage/drift/`
+- register the database and DAOs through `get_it`, not GetX bindings
+- let repositories coordinate remote APIs and local DAOs when offline/cache behavior is needed
+- do not run raw Drift queries from controllers or views
+- do not leak generated Drift rows, companions, or query objects into presentation code
+
+Treat schema changes as versioned changes:
+
+- bump `schemaVersion` whenever a shipped schema changes
+- prefer `dart run drift_dev make-migrations` to generate migration helpers and tests
+- keep migration code explicit and test upgrades from older schema versions
+- never rely on destructive recreation for production user data unless the product explicitly permits data loss
 
 Avoid:
 
 - storing growing JSON blobs in `shared_preferences`
 - treating `shared_preferences` like a mini database
 - preloading too many preference keys at startup without a clear reason
+- putting database access directly in GetX controllers
 - mixing multiple DI styles without a clear composition boundary
 
 Read [references/local-storage-rules.md](references/local-storage-rules.md) for the storage decision rules.
@@ -399,7 +417,7 @@ When using this skill, finish with a short summary that includes:
 - whether bindings and dependency injection were standardized
 - whether controller responsibilities became clearer
 - whether the API layer was normalized to `retrofit`, `json_serializable`, and `result_dart`
-- whether local persistence was placed in `shared_preferences` or `realm` for the right reasons
+- whether local persistence was placed in `shared_preferences` or `drift` for the right reasons
 - whether asset access was normalized to `flutter_gen`
 - whether app configuration was normalized to `envied`
 - whether background compute used `worker_manager` appropriately or was intentionally avoided
@@ -414,7 +432,7 @@ When using this skill, finish with a short summary that includes:
 - Bindings are the default composition root for GetX features.
 - Controllers orchestrate; services and repositories execute.
 - API contracts use `retrofit`; JSON mapping uses `json_serializable`; repository flows use `result_dart`.
-- Small stable keys use `shared_preferences`; evolving user data uses `realm`.
+- Small stable keys use `shared_preferences`; structured or evolving local data uses `drift`.
 - Assets use `flutter_gen`, not hardcoded paths.
 - App environment uses `envied`, not duplicated constants.
 - `worker_manager` is for heavy repeated compute, not default async work.
