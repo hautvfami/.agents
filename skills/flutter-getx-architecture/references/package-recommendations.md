@@ -31,6 +31,12 @@ Why:
 Use it through the design system and app theme, not ad-hoc in random widgets.
 ### `cached_network_image`
 
+Use when the app benefits from persistent network-image caching, placeholders, or centralized network-image behavior.
+
+Do not treat caching as a reason to decode oversized raster images. Prefer appropriately sized image sources from the backend/CDN when available, and size/decode thumbnails for their actual display use.
+
+For Flutter `Image` APIs, consider `cacheWidth` / `cacheHeight` when a large raster image is displayed much smaller than its source dimensions.
+
 ### `animate_do`
 
 Use for simple, readable entrance and attention animations.
@@ -80,7 +86,13 @@ Good fit for:
 
 Keep Drift APIs below repositories. GetX controllers should not query the database directly or depend on generated Drift row / companion types.
 
-When a shipped schema changes, increment `schemaVersion` and prefer `dart run drift_dev make-migrations` plus generated migration tests.
+Treat Drift schema versions as release boundaries, not as counters for every development edit.
+
+Track the last schema version that actually shipped. While the next app release is still in development, accumulate schema edits into one pending release migration. If the pending schema version has already been bumped but has not shipped, refine that same migration instead of bumping again.
+
+Before release, finalize the migration from the last shipped schema to the new release schema, run `dart run drift_dev make-migrations` when using Drift's generated workflow, review the generated steps, and run migration tests.
+
+Keep a release-note/TODO or small app-version → DB-schema history so the team can tell whether a schema bump has already shipped.
 
 
 ### `share_plus`
