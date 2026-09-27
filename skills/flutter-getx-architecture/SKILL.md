@@ -139,6 +139,18 @@ Async lifecycle hygiene:
 
 Read [references/getx-controller-rules.md](references/getx-controller-rules.md) for controller boundaries.
 
+Apply the same visibility discipline across all handwritten Dart code:
+
+- make fields, methods, helpers, and declarations private with `_` when they are not part of the intended external API
+- expose narrow getters or explicit actions instead of public mutable internals
+- remember that Dart privacy is library-scoped; do not add leading underscores to ordinary local variables or parameters
+- when the project uses Dart 3.10 or newer, prefer dot shorthand for enums, constructors, and static members when the context type is obvious and readability improves
+- do not force dot shorthand when the context is ambiguous or the explicit type communicates intent better
+
+For state used across unrelated routes, promote only the shared reactive projection to app scope. A small `AppController` may expose auth/session and purchase-entitlement state, while `AuthService`, `PurchaseService`, repositories, APIs, and storage keep the underlying coordination and infrastructure responsibilities.
+
+Read [references/dart-code-conventions.md](references/dart-code-conventions.md) for visibility, dot shorthand, and app-wide state rules.
+
 ### 6. Enforce the API stack: `retrofit` + `json_serializable` + `result_dart`
 
 For networked features, API access must use:
@@ -382,6 +394,11 @@ Before wrapping up:
 - confirm GetX bindings only register GetX-facing objects
 - confirm non-GetX infrastructure is resolved from `get_it` or the project's app-level DI container
 - confirm controllers do not own too many responsibilities
+- confirm non-API fields, methods, helpers, and declarations are private by default
+- confirm public mutable state is intentional and not just exposed for convenience
+- confirm dot shorthand is used where Dart >= 3.10 and the context type is obvious
+- confirm truly cross-feature reactive state such as auth/session or purchase entitlement is not duplicated across feature controllers
+- confirm app-wide state lives in a small app-level controller while SDK/API/storage coordination stays in services and repositories
 - confirm API clients use `retrofit`
 - confirm JSON models use `json_serializable`
 - confirm repositories return explicit results instead of leaking transport exceptions upward
@@ -416,6 +433,9 @@ When using this skill, finish with a short summary that includes:
 - which feature or route boundaries changed
 - whether bindings and dependency injection were standardized
 - whether controller responsibilities became clearer
+- whether class and library public API surfaces were narrowed appropriately
+- whether modern Dart dot shorthand was used where it improves readability
+- whether truly app-wide reactive state was centralized without creating a god controller
 - whether the API layer was normalized to `retrofit`, `json_serializable`, and `result_dart`
 - whether local persistence was placed in `shared_preferences` or `drift` for the right reasons
 - whether asset access was normalized to `flutter_gen`
@@ -431,6 +451,10 @@ When using this skill, finish with a short summary that includes:
 - Feature scope first, global scope second.
 - Bindings are the default composition root for GetX features.
 - Controllers orchestrate; services and repositories execute.
+- Private by default: expose only intentional APIs; keep internal fields and helpers library-private.
+- Use Dart dot shorthand when the context type is obvious and the project language version supports it.
+- Global state is for cross-feature app-lifecycle state, not feature-local convenience.
+- `AppController` may expose shared auth/session and entitlement state; underlying SDK and data coordination stays in services and repositories.
 - API contracts use `retrofit`; JSON mapping uses `json_serializable`; repository flows use `result_dart`.
 - Small stable keys use `shared_preferences`; structured or evolving local data uses `drift`.
 - Assets use `flutter_gen`, not hardcoded paths.
