@@ -524,6 +524,67 @@ Do not add `get` mechanically when it adds no meaning.
 
 Within a class whose context is already clear, prefer `load()` over `loadProfile()` if there is only one obvious resource being loaded. Use the longer name when multiple load operations exist and disambiguation is useful.
 
+## Minimum Sufficient Code Rule
+
+Prefer the smallest implementation that correctly expresses the required behavior.
+
+If a feature can be implemented clearly in roughly 50 lines, do not expand it to 200 lines through wrappers, defensive branches, duplicate state, unnecessary helpers, or speculative abstractions.
+
+Line count is not a target by itself. Shorter code is better only when it remains:
+
+- correct
+- readable
+- testable
+- explicit about important business rules
+- safe at real system boundaries
+
+Remove code that does not contribute to a real requirement, invariant, integration boundary, or failure mode.
+
+Avoid speculative defensive code for states that the architecture already guarantees cannot happen.
+
+For example, if a required binding guarantees a dependency exists, do not add repeated registration checks merely to make the code appear safer.
+
+Likewise, do not add null checks after a value has already been proven non-null by the type system or by an immediately preceding invariant.
+
+Prefer:
+
+```dart
+final user = result.getOrNull();
+
+if (user == null) return;
+
+_apply(user);
+```
+
+over repeatedly checking the same condition through multiple layers.
+
+### Real Boundary Checks
+
+Do keep validation at boundaries where invalid data can genuinely enter the system, such as:
+
+- user input
+- remote API responses
+- persisted data from older app versions
+- platform channels
+- deep links
+- external SDK callbacks
+- nullable values that are legitimately optional
+
+The goal is not to remove safety. The goal is to place checks where failure is actually possible.
+
+### Avoid Defensive Noise
+
+Do not add code for hypothetical states solely because they can be imagined.
+
+Before adding a fallback, null check, catch block, registration check, or default branch, ask:
+
+1. can this state actually occur under the current contract?
+2. is this boundary receiving untrusted or external data?
+3. does handling the state produce a meaningful recovery path?
+4. would failing fast reveal a programming error more clearly?
+
+If the state represents a programming or wiring bug, prefer fail-fast behavior over silently continuing with partial behavior.
+
 ## Guard Clause And Control Flow Rule
 
 Prefer early returns and guard clauses when they make the main execution path flatter and easier to scan.
@@ -656,6 +717,48 @@ A catch block should normally do at least one intentional thing:
 If the exception is mapped to a known `AppFailure`, logging responsibility may live at the boundary that first converts or observes the unexpected exception. Do not log the same failure repeatedly at every layer.
 
 Expected control-flow outcomes should not be modeled as exceptions merely so they can be caught and logged.
+
+## Async Concurrency Rule
+
+Do not serialize independent asynchronous work without a reason.
+
+Avoid:
+
+```dart
+await loadProfile();
+await loadEntitlement();
+await loadRemoteConfig();
+```
+
+when none of those operations depends on the result or side effects of the previous one.
+
+Prefer:
+
+```dart
+await Future.wait([
+  loadProfile(),
+  loadEntitlement(),
+  loadRemoteConfig(),
+]);
+```
+
+Use `Future.wait` when:
+
+- tasks are independent
+- all results are required before continuing
+- running them concurrently does not violate ordering, rate limits, transactions, or shared mutable state
+
+Keep sequential `await` when:
+
+- a later task needs an earlier result
+- ordering is part of the business rule
+- operations mutate the same resource and must remain ordered
+- an API or SDK requires serialized calls
+- concurrency would create duplicate work, races, or excessive resource usage
+
+If independent calls return values of different types and the resulting code becomes awkward, prefer a small clear orchestration method rather than introducing a complex abstraction merely to parallelize them.
+
+For startup and screen loading, explicitly review sequential await chains and parallelize independent I/O where it reduces unnecessary waiting.
 
 ## Reuse And Extraction Rule
 
@@ -910,6 +1013,10 @@ Before finishing Dart or Flutter changes:
 - use `Get.isRegistered` only for intentionally optional or lifecycle-specific registration checks
 - keep `BuildContext` out of controllers, services, repositories, and DAOs
 - prefer guard clauses and early returns over deeply nested `if` blocks
+- prefer the minimum sufficient implementation; remove defensive branches and wrappers that do not represent real requirements or reachable failure modes
+- keep safety checks at genuine external or untrusted boundaries instead of scattering speculative checks through business logic
+- fail fast on impossible internal states or violated wiring invariants instead of silently recovering without a meaningful recovery path
+- review sequential async chains and use `Future.wait` for independent work when ordering is not required
 - keep trivial single-statement guards compact when readability remains clear
 - never leave unexpected `catch` blocks silent; capture `(e, st)` and log or report the issue
 - use contextual error log names such as `ClassName.methodName`
