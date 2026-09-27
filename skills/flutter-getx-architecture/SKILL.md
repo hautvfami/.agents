@@ -416,6 +416,9 @@ Before wrapping up:
 - confirm error logs carry useful context such as `ClassName.methodName` and are not duplicated at every layer
 - confirm meaningful UI blocks are extracted as widgets rather than large widget-returning helpers where appropriate
 - confirm widget trees avoid unnecessary source-level wrapper depth when one clear widget can express the same visual box
+- confirm simple flex/layout constraints use `Expanded`, `Flexible`, or other direct layout primitives before `LayoutBuilder`
+- confirm `LayoutBuilder` is used only when incoming parent constraints actually affect composition
+- confirm `IntrinsicHeight` / `IntrinsicWidth` are avoided unless intrinsic sizing is truly required
 - confirm custom shadows are intentional, restrained, and do not create wide muddy color bleed
 - confirm abstractions such as BaseRepository/BaseController/BaseService exist only when real repeated behavior justifies them
 - confirm repeated class-internal logic stays in private methods until real reuse justifies extraction
@@ -498,6 +501,8 @@ When using this skill, finish with a short summary that includes:
 - Names should be precise and short enough to scan; do not repeat obvious class or file context.
 - Prefer simple concrete code over premature base classes or generic abstractions.
 - Keep Flutter widget trees shallow when wrappers add no distinct semantics or behavior; consolidate one visual box when it improves readability.
+- Prefer Flutter's normal constraint system and flex primitives before layout-time builders or intrinsic measurement.
+- `LayoutBuilder` is for genuine constraint-dependent composition; intrinsic sizing is a last resort, especially in repeated/deep trees.
 - Shadows express hierarchy, not decoration by default; keep custom blur/spread/color restrained.
 - Reuse should follow ownership: private method first, extension for type-focused behavior, mixin only for proven shared instance behavior.
 - Common date/time presentation formatting belongs in focused `DateTime` extensions; one-off formats may stay local.
