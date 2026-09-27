@@ -365,6 +365,8 @@ Optimize bootstrap for startup time:
 - only `await` steps that are truly required before the app can continue
 - keep genuinely sequential dependencies sequential
 - group independent startup tasks with `Future.wait(...)`
+- apply the same concurrency review to independent screen/service initialization, not only app bootstrap
+- keep sequential awaits only when later work depends on earlier output, order is a business requirement, or shared state / API constraints require serialization
 - do not block app launch on work whose result is not needed immediately
 
 Good examples:
@@ -376,6 +378,8 @@ Good examples:
 Weak example:
 
 - long chains of sequential `await` calls where later tasks do not actually depend on earlier results
+- defensive setup branches for impossible states already guaranteed by the composition root
+- orchestration code that grows far beyond the underlying business logic without adding a real responsibility
 
 ## Binding Placement Rule
 
