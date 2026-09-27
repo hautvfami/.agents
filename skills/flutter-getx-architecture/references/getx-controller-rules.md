@@ -11,13 +11,16 @@ Good controller responsibilities:
 - expose UI state
 - trigger loading and refreshing
 - handle user intent such as submit, retry, select, filter, or navigate
-- map repository results into screen state
+- call an injected typed Retrofit API directly for simple remote-only flows
+- map API, repository, or service results into screen state
 - own disposable workers or listeners related to the screen
 
 Bad controller responsibilities:
 
-- raw API implementation
-- database setup
+- raw `Dio` / `http` request construction
+- manual JSON parsing
+- database setup or raw Drift queries
+- cache/offline/sync policy
 - route registration
 - JSON model definitions
 - giant cross-feature business workflows
@@ -115,7 +118,7 @@ Global state should reduce duplication and inconsistent snapshots, not create a 
 
 ## Dependency And Context Rule
 
-Controllers receive repositories and services through constructor injection.
+Controllers receive the smallest dependency that matches the feature: a typed Retrofit API for a simple remote flow, or a repository/service when that layer owns meaningful policy or orchestration. Inject that dependency through the constructor.
 
 Do not resolve ordinary dependencies with `Get.find()` or `getIt()` inside controller methods.
 
@@ -125,7 +128,19 @@ Use `Get.isRegistered<T>()` only when registration is truly optional or lifecycl
 
 Do not accept or retain `BuildContext` in a controller. UI context belongs to widgets.
 
-Keep dependency flow one-way:
+Keep dependency flow one-way, but do not force the same number of layers onto every feature.
+
+Simple:
+
+```text
+View
+  ↓
+Controller
+  ↓
+Retrofit API
+```
+
+When complexity requires it:
 
 ```text
 View
@@ -137,7 +152,9 @@ Repository / App Service
 API / DAO / SDK
 ```
 
-Repositories and lower layers must not import or call controllers.
+Repositories, APIs, DAOs, and lower layers must not import or call controllers.
+
+Do not create a use case whose only behavior is forwarding one controller call to one repository method. Add a use case/service when it owns real business orchestration, reuse, or policy.
 
 ## Guard Clause Rule
 
@@ -184,7 +201,9 @@ try {
 }
 ```
 
-If repositories already convert known infrastructure exceptions into typed `AppFailure` results, controllers should handle the typed result instead of wrapping every repository call in redundant `try/catch`.
+If a repository/service already converts known infrastructure exceptions into typed `AppFailure` results, controllers should handle the typed result instead of wrapping every call in redundant `try/catch`.
+
+For a direct Retrofit flow, the controller may catch the transport exception at that boundary, log it with `error` and `stackTrace`, and map it into presentation error state. Do not add a repository solely to relocate a trivial `try/catch`.
 
 Do not log the same error again at every layer unless each log adds genuinely different operational context.
 
@@ -213,9 +232,10 @@ Warning signs that a controller is too large:
 
 If this happens:
 
-1. split repository or service logic out first
-2. split feature sections into smaller widgets
-3. split the flow into multiple controllers only if the screen boundaries are real
+1. move real data policy or business orchestration into a repository/service only when that responsibility actually exists
+2. extract private controller helpers for internal logic that still belongs to the controller
+3. split feature sections into smaller widgets
+4. split the flow into multiple controllers only if the screen boundaries are real
 
 As a practical rule, if one controller method becomes long enough that it is hard to scan quickly, treat that as a signal to extract helpers or move responsibilities down a layer.
 
