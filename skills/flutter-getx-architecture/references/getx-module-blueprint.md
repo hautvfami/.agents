@@ -32,9 +32,11 @@ lib/
       l10n_wrapper.dart
     di/
       injector.dart
+    extensions/
+      extensions.dart
+      date_time_extensions.dart
     helpers/
       helpers.dart
-      date_helpers.dart
       parse_helpers.dart
       validation_helpers.dart
     design_system/
@@ -182,6 +184,7 @@ Examples of app-wide layers:
 - environment configuration
 - cross-cutting services
 - localization
+- reusable type-focused extensions such as date/time formatting
 - pure helpers
 
 ## File Organization Rule
@@ -416,13 +419,28 @@ Keep repository placement consistent across the app: repositories live under `ap
 
 Read [package-recommendations.md](package-recommendations.md) when deciding which third-party packages should be part of the project baseline.
 
+## Extensions And Helpers Rule
+
+Use `app/extensions/` when reusable behavior naturally belongs to an existing type.
+
+Prefer:
+
+- `app/extensions/date_time_extensions.dart` for common `DateTime` display formatting
+- a small `extensions.dart` barrel when multiple extension files exist
+- semantic extension methods rather than repeated raw formatting expressions
+
+Common date/time formatting should normally be centralized in `DateTime` extensions instead of scattered `DateFormat(...).format(...)` calls throughout views and controllers.
+
+Do not force one-off feature-specific formatting into a global extension when keeping it local is clearer.
+
+Use mixins only when multiple classes genuinely share instance behavior. Do not create generic mixins before reuse is proven.
+
 ## Helpers Rule
 
 Keep helpers small, pure, and explicit.
 
 Prefer `app/helpers/` for:
 
-- formatters
 - parsers
 - validators
 - small stateless conversion helpers
@@ -435,6 +453,8 @@ Avoid putting these in helpers:
 - stateful objects
 - navigation orchestration
 - generic "misc" dumping-ground code
+- date/time formatting that naturally belongs in a `DateTime` extension
+- instance behavior that should live in a focused mixin or dedicated class
 
 If logic belongs clearly to a model, repository, service, widget, or controller, keep it there instead of pushing it into helpers.
 
