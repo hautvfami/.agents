@@ -2,13 +2,26 @@
 
 ## Core Principle
 
-Keep public APIs intentionally small, use modern Dart syntax when it improves clarity, and promote state to app scope only when that state genuinely belongs to the whole application.
+Prefer code that is easy to trace, hard to misuse, and small in public surface.
 
 These rules apply across controllers, services, repositories, models, widgets, helpers, and other handwritten Dart code.
+
+The priority order is:
+
+1. clear ownership and dependency direction
+2. small intentional APIs
+3. simple state models
+4. immutable or narrowly mutable data
+5. concise readable naming
+6. modern Dart syntax when it reduces noise without hiding meaning
+
+Do not add abstractions, code generation, or framework layers merely to satisfy style.
 
 ## Private By Default
 
 If a field, method, getter, setter, helper class, or top-level declaration is not part of the intended external API, make it private with a leading underscore.
+
+This rule is especially important for GetX controllers because much controller logic is often internal to one class and one file.
 
 Prefer:
 
@@ -24,27 +37,37 @@ class ProfileController extends GetxController {
   bool get isLoading => _isLoading.value;
   UserProfile? get profile => _profile.value;
 
-  Future<void> refresh() async {
-    await _loadProfile();
+  Future<void> refresh() => _load();
+
+  Future<void> _load() async {
+    final result = await _repository.profile();
+
+    result.fold(
+      _handleFailure,
+      _applyProfile,
+    );
   }
 
-  Future<void> _loadProfile() async {
-    // Internal implementation.
+  void _applyProfile(UserProfile profile) {
+    _profile.value = profile;
+  }
+
+  void _handleFailure(AppFailure failure) {
+    // Internal mapping.
   }
 }
 ```
 
-Avoid exposing mutable internals merely because another class might want to reach into them later.
+If `_load`, `_applyProfile`, or `_handleFailure` are never called outside the controller, they should not be public.
 
-Prefer a narrow public surface made of:
+This has two benefits:
 
-- state that consumers truly need to read
-- explicit actions that consumers are allowed to trigger
-- immutable or read-only projections when mutation should remain internal
+- unrelated code cannot depend on controller internals
+- IDE and analyzer tooling can more reliably identify unused private declarations
 
-Dart privacy is library-scoped, not class-scoped. With the repository convention of keeping one primary class per file, a leading underscore still prevents unrelated files and libraries from depending on internal implementation details.
+Dart privacy is library-scoped rather than class-scoped. With the repository convention of keeping one primary class per file, a leading underscore still provides the intended isolation from unrelated files.
 
-Do not prefix local variables, parameters, or local functions with `_` just to make them look private. Local identifiers are already scoped locally. Use `_`, `__`, and similar names only for intentionally unused callback parameters.
+Do not prefix ordinary local variables or parameters with `_`. They are already locally scoped. Use `_`, `__`, and similar names only for intentionally unused callback parameters.
 
 ## Public API Rule
 
@@ -54,8 +77,8 @@ Before leaving a declaration public, ask:
 
 1. does another file or module genuinely need this?
 2. should callers be allowed to mutate it directly?
-3. would a getter or explicit method communicate intent better?
-4. will making it public encourage unrelated classes to couple to this implementation?
+3. would a getter or explicit action communicate intent better?
+4. will making it public create a dependency that becomes difficult to remove later?
 
 If the answer is no, make it private.
 
@@ -71,13 +94,40 @@ void select(String id) {
 }
 ```
 
-over:
+over exposing the mutable `Rx` directly when external mutation is not part of the intended API.
+
+## Final By Default
+
+Prefer `final` for fields and local variables when the reference does not need reassignment.
+
+Prefer:
 
 ```dart
-final selectedId = RxnString();
+final repository = getIt<ProfileRepository>();
+final items = <UserProfile>[];
 ```
 
-when external code should not freely mutate the observable.
+Use mutable variables only when reassignment is part of the actual logic.
+
+For class fields, prefer `final` dependencies and collaborators unless their identity genuinely changes during the object lifetime.
+
+Do not use `final` mechanically where mutation is the point, but require a reason before introducing reassignable state.
+
+## Const In Flutter UI
+
+Use `const` whenever practical for immutable widget subtrees and constant values.
+
+Prefer:
+
+```dart
+const SizedBox(height: 12);
+const Icon(Icons.close);
+const EdgeInsets.symmetric(horizontal: 16);
+```
+
+Use `const` constructors for widgets when all arguments are compile-time constants.
+
+Do not distort otherwise clear code merely to force `const`, but avoid missing obvious constant expressions in hot UI paths.
 
 ## Dot Shorthand Rule
 
@@ -97,55 +147,160 @@ Text(
   overflow: .ellipsis,
 )
 
-final ScrollController controller = .new();
 final Duration debounce = .milliseconds(300);
 ```
 
-Prefer dot shorthand especially for:
+Prefer dot shorthand for:
 
 - enum values in typed parameters
 - constructors where the expected type is explicit
 - static members where the context type is unambiguous
 
-Do not force dot shorthand when:
+Do not force it when:
 
-- the project is below Dart 3.10
+- the project language version is below Dart 3.10
 - the context type is not obvious
-- the shorthand fails because the surrounding type is a supertype that does not declare the referenced member
-- spelling out the type makes domain intent clearer
-- the expression becomes harder to search or understand
+- the explicit type communicates important domain intent
+- the shorthand makes searching or debugging harder
 
 The goal is less visual noise, not maximum abbreviation.
 
-## Type Inference Rule
+## Dependency Resolution Rule
 
-Use type inference when the right-hand side makes the type obvious.
+Resolve dependencies at composition boundaries, not deep inside business logic.
+
+Prefer:
+
+- GetX bindings for GetX controllers and GetX-specific lifecycle objects
+- `get_it` during bootstrap or composition for infrastructure
+- constructor injection for repositories, services, and controllers
 
 Prefer:
 
 ```dart
-final repository = getIt<ProfileRepository>();
-final items = <UserProfile>[];
+class ProfileController extends GetxController {
+  ProfileController(this._repository);
+
+  final ProfileRepository _repository;
+}
 ```
 
-Use an explicit type when it improves the API contract, enables dot shorthand clearly, documents a non-obvious abstraction, or prevents accidental widening.
+Avoid:
 
-Do not remove useful types solely to make code shorter.
+```dart
+class ProfileController extends GetxController {
+  final _repository = getIt<ProfileRepository>();
+}
+```
+
+and avoid scattering `Get.find()` through methods or leaf widgets.
+
+Dependency lookup should be visible near object construction so the dependency graph remains traceable.
+
+## BuildContext Boundary Rule
+
+Do not pass `BuildContext` into controllers, services, repositories, DAOs, or infrastructure objects.
+
+`BuildContext` belongs to the widget layer.
+
+If non-widget code needs to request navigation, dialogs, snackbars, or other UI effects:
+
+- keep the decision in presentation code
+- expose a typed state or event
+- use the project's intentional GetX presentation mechanism when appropriate
+
+Repositories and services should never need Flutter widget context.
+
+## Mutable Collection Rule
+
+Do not expose mutable internal collections when callers should only read them.
+
+Avoid:
+
+```dart
+List<User> get users => _users;
+```
+
+when callers can mutate the internal list.
+
+Prefer a read-only or copied view appropriate to the use case:
+
+```dart
+List<User> get users => List.unmodifiable(_users);
+```
+
+For reactive collections, expose only the smallest public API needed and keep mutation methods on the owner when possible.
+
+Do not copy large collections repeatedly in hot paths without reason; choose a read-only strategy appropriate to performance needs.
+
+## Late Rule
+
+Avoid `late` when constructor injection, direct initialization, or a nullable type expresses the lifecycle more safely.
+
+Use `late` only when object lifecycle genuinely guarantees initialization before first read.
+
+Too much `late` often hides unclear ownership or initialization order.
+
+Prefer:
+
+- `required` constructor parameters
+- direct field initialization
+- nullable fields when absence is a legitimate state
+
+Do not use `late` merely to silence initialization design problems.
+
+## Dynamic Boundary Rule
+
+Avoid `dynamic` when the type can be known.
+
+Keep `dynamic` and `Map<String, dynamic>` near unavoidable boundaries such as raw JSON decoding, then convert immediately to typed DTOs or domain models.
+
+Do not let untyped values flow into:
+
+- controllers
+- repositories' public APIs
+- app services
+- reusable widgets
+
+Prefer explicit types that allow analyzer and IDE tooling to detect mistakes.
+
+## Dependency Direction Rule
+
+Keep dependencies moving in one direction:
+
+```text
+View
+  ↓
+Controller
+  ↓
+Repository / App Service
+  ↓
+API / DAO / SDK
+```
+
+Rules:
+
+- lower layers do not import controllers or views
+- repositories do not navigate
+- DAOs do not know features
+- services do not depend on widget classes
+- controllers orchestrate; repositories and services execute
+- APIs and storage implementations stay below repositories
+
+Do not create circular dependencies between app layers.
 
 ## App-Wide State Rule
 
-Promote state to app scope when multiple unrelated routes or features need the same live state and the state follows the application lifecycle rather than a screen lifecycle.
+Promote state to app scope only when multiple unrelated routes need the same live state and the state follows the application lifecycle rather than one screen lifecycle.
 
-Typical app-wide state includes:
+Typical app-wide state:
 
-- authenticated user / session snapshot
+- authenticated user or session
 - authentication status
-- purchase entitlement snapshot
-- owned products or premium access
-- app-wide connectivity or maintenance state when the product genuinely depends on it
-- other small cross-feature state that must remain consistent across routes
-
-A small app-level GetX controller is an appropriate owner for this shared reactive presentation state.
+- purchase entitlement
+- premium access
+- owned products
+- small cross-feature connectivity or maintenance state when genuinely app-wide
 
 Prefer:
 
@@ -154,82 +309,294 @@ AuthService / PurchaseService / repositories
                 ↓
           AppController
                 ↓
-      multiple feature controllers / views
+      multiple routes / features
 ```
 
-Infrastructure and SDK coordination remain in services and repositories. `AppController` exposes the small derived state surface that the UI needs globally.
+`AppController` owns only the small reactive projection needed by the UI.
 
-## AppController Rule
+Infrastructure remains elsewhere:
 
-If the application has meaningful cross-feature reactive state, prefer one app-level controller such as:
+- `AuthService` owns auth SDK and session coordination
+- `PurchaseService` owns store SDK and purchase lifecycle
+- repositories own API and persistence coordination
+- Drift stays below repositories / storage infrastructure
 
-```text
-app/
-  controllers/
-    app_controller.dart
+Do not put route-local forms, filters, pagination, tab state, or screen loading state in `AppController`.
+
+## Enum And Sealed State Rule
+
+Use `enum` or a small `sealed` hierarchy when it makes a finite state easier to understand than multiple booleans.
+
+Prefer an enum for simple status:
+
+```dart
+enum LoadStatus {
+  idle,
+  loading,
+  success,
+  failure,
+}
 ```
 
-Register it once from the initial app binding and keep it alive for the app lifecycle.
+Use a sealed hierarchy only when different states need different payloads and the hierarchy remains small and obvious:
 
-Typical responsibilities:
+```dart
+sealed class ProfileState {
+  const ProfileState();
+}
 
-- expose current auth/session state
-- expose current purchase entitlement state
-- subscribe to app-level service or repository streams
-- provide small app-wide actions such as refreshing session or entitlement state
-- make shared reactive state consistent across routes
+final class ProfileLoading extends ProfileState {
+  const ProfileLoading();
+}
 
-It should not:
+final class ProfileReady extends ProfileState {
+  const ProfileReady(this.profile);
 
-- contain raw HTTP calls
-- contain store SDK implementation
-- contain database queries
-- absorb feature-local form or screen state
-- become a dumping ground for every observable in the application
-- replace repositories or app services
+  final UserProfile profile;
+}
 
-Global does not mean everything belongs in one controller.
+final class ProfileFailed extends ProfileState {
+  const ProfileFailed(this.failure);
 
-If an app-wide concern becomes large and independently complex, keep its infrastructure in a dedicated service and expose only the shared presentation projection through `AppController`, or split the app-level state deliberately when that produces clearer boundaries.
+  final AppFailure failure;
+}
+```
 
-## Feature State Rule
+Do not introduce Freezed, unions code generation, or a large state framework merely to model a few simple states.
 
-Keep state feature-local when it belongs to one route or tightly related flow.
+Do not create a sealed hierarchy if an enum plus one or two fields is clearer.
 
-Examples:
+Use the simplest representation that prevents invalid state combinations and remains easy to read in one pass.
 
-- form input
-- selected tab
-- local filters
-- page loading state
-- temporary search state
-- route-specific pagination
+## Boolean State Rule
 
-Do not move state into `AppController` merely because two widgets on the same screen need it.
+Avoid several booleans representing one state machine.
 
-## Access Rule
+Avoid combinations such as:
 
-Do not scatter `Get.find<AppController>()` throughout deep leaf widgets.
+```dart
+isLoading
+hasError
+isEmpty
+isSuccess
+```
+
+when they can become contradictory.
+
+Use:
+
+- one enum for simple finite status
+- one small sealed hierarchy when each case needs distinct data
+- derived getters for values that can be calculated
+
+Independent booleans are still appropriate when they represent genuinely independent facts.
+
+## Derived State Rule
+
+Do not store state that can be derived reliably from another source of truth.
 
 Prefer:
 
-- resolving the app controller at a clear feature or view boundary
-- constructor parameters for reusable leaf widgets when practical
-- `GetView`, bindings, or another consistent GetX access pattern already used by the project
+```dart
+User? get currentUser => _currentUser.value;
+bool get isLoggedIn => currentUser != null;
+```
 
-Shared state should be globally owned, not globally accessed without discipline.
+over maintaining a separate `RxBool isLoggedIn` that must stay synchronized manually.
+
+Likewise derive:
+
+- `hasPremium` from entitlement when possible
+- `isEmpty` from the owned collection
+- button availability from the actual validation inputs
+
+Store a derived value only when recomputation is expensive or it represents an independent persisted fact.
+
+## Naming Rule
+
+Names should be precise but concise.
+
+Choose the shortest name that is unambiguous in its local context.
+
+Prefer:
+
+```dart
+class PurchaseService {
+  Future<void> restore() {}
+}
+
+class ProfileController {
+  Future<void> _load() {}
+  void _apply(UserProfile profile) {}
+}
+```
+
+over names that repeat context already supplied by the class or file:
+
+```dart
+class PurchaseService {
+  Future<void> restorePurchaseServicePurchases() {}
+}
+
+class ProfileController {
+  Future<void> loadProfileControllerProfileData() {}
+}
+```
+
+Avoid:
+
+- repeating the class name in every member
+- stacking synonyms such as `loadFetchUserProfileData`
+- suffixes like `ManagerServiceHelper`
+- names that encode implementation details callers do not care about
+
+Use longer names only when they genuinely disambiguate two concepts.
+
+### Boolean Naming
+
+Boolean names should read naturally as predicates.
+
+Prefer:
+
+- `isLoading`
+- `hasPremium`
+- `canPurchase`
+- `shouldRefresh`
+
+Avoid vague names such as:
+
+- `loadingFlag`
+- `premiumValue`
+- `purchaseBoolean`
+
+Prefer positive names when practical so callers do not need double negatives.
+
+### Method Naming
+
+Use verbs for actions and side effects:
+
+- `load()`
+- `refresh()`
+- `saveDraft()`
+- `restore()`
+- `completePurchase()`
+
+Do not add `get` mechanically when it adds no meaning.
+
+Within a class whose context is already clear, prefer `load()` over `loadProfile()` if there is only one obvious resource being loaded. Use the longer name when multiple load operations exist and disambiguation is useful.
+
+## Widget Extraction Rule
+
+When a meaningful UI block deserves its own identity, prefer extracting a `StatelessWidget` or `StatefulWidget` instead of a helper function returning `Widget`.
+
+Prefer a widget when:
+
+- the block is reusable
+- the block is large enough to deserve a name
+- it owns local widget state
+- it benefits from an independent rebuild boundary
+- moving it out makes the parent screen easier to scan
+
+A tiny one-off expression does not need a new widget class merely to satisfy the rule.
+
+## Abstraction Rule
+
+Do not create abstraction before there is a real repeated shape.
+
+Avoid introducing:
+
+- `BaseRepository`
+- `BaseController`
+- `BaseService`
+- generic CRUD layers
+- generic response wrappers on top of existing typed wrappers
+
+unless several real implementations share meaningful behavior.
+
+Prefer duplication of a few obvious lines over a premature abstraction that hides control flow.
+
+Extract an abstraction when it removes repeated domain behavior, not merely repeated syntax.
+
+## Import Rule
+
+Keep imports predictable and minimal.
+
+Prefer this order:
+
+1. `dart:`
+2. `package:`
+3. project-relative imports
+
+Within each group, keep imports sorted.
+
+Avoid:
+
+- unused imports
+- importing internal `src/` files from third-party packages
+- importing broad barrel files when a narrow import prevents circular dependencies
+- unnecessary cross-feature imports
+
+Use package or relative imports consistently according to the project's existing convention. Do not mix styles randomly in the same layer.
+
+## Class Modifier Rule
+
+Use Dart class modifiers only when they communicate a real design boundary.
+
+Examples:
+
+- `final class` when outside inheritance or implementation should not be supported
+- `base class` when inheritance is controlled and implementation invariants matter
+- `sealed class` for a small closed hierarchy used in exhaustive switching
+
+Do not add modifiers everywhere merely because they are available.
+
+Do not introduce a complex hierarchy to justify a modifier.
+
+Simple ordinary classes remain the default.
+
+## Module Export Rule
+
+Barrel files should expose the intended public surface of a module, not every file in the directory.
+
+Export:
+
+- stable public models
+- public controller/view/widget entry points
+- public service or repository contracts when callers need them
+
+Do not export merely for convenience:
+
+- private implementation helpers
+- generated Drift internals
+- DAO implementation details
+- internal DTOs that should stay behind repositories
+- files that are only used by sibling files in the same module
+
+A smaller export surface reduces accidental coupling and makes later refactors safer.
 
 ## Validation Checklist
 
 Before finishing Dart or Flutter changes:
 
-- check that non-API members are private
-- check that public mutable state is truly intended to be mutable externally
-- remove public helpers that are only used internally
-- do not add leading underscores to ordinary local variables or parameters
+- make non-API fields, methods, helpers, and declarations private
+- verify controller logic used only inside its own file is private
+- make stable references `final`
+- add obvious `const` in Flutter UI
+- avoid unnecessary `late`
+- remove avoidable `dynamic`
+- resolve dependencies at bindings/bootstrap and inject them through constructors
+- keep `BuildContext` out of controllers, services, repositories, and DAOs
+- do not expose mutable internal collections
+- keep the dependency direction View → Controller → Repository/Service → API/DAO/SDK
+- derive state instead of duplicating it
+- use enum/sealed state only when simpler than booleans, and keep sealed hierarchies small
+- do not add Freezed or another union generator just to model simple state
+- use concise names without repeating class/file context
+- use predicate-style boolean names
+- avoid premature base classes and generic abstractions
+- extract meaningful UI blocks as widgets when it improves structure
+- keep imports sorted, minimal, and free of third-party `src/` paths
+- use class modifiers only when they communicate a useful boundary
+- export only intentional module APIs
 - use dot shorthand where Dart >= 3.10 and the context is obvious
-- do not use dot shorthand where it obscures the type
-- check whether cross-feature reactive state is duplicated across controllers
-- move truly app-wide reactive state to the app-level controller
-- keep SDK, API, storage, and domain coordination out of `AppController`
-- keep feature-local state out of global scope
+- keep app-wide state in `AppController` only when it is truly cross-feature
