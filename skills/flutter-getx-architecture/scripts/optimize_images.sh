@@ -141,9 +141,8 @@ convert_one() {
 
   local tmp
   tmp="$(mktemp "${TMPDIR:-/tmp}/flutter-assets-webp.XXXXXX")"
-  trap 'rm -f "$tmp"' RETURN
 
-  if ! cwebp -quiet -metadata none -q "$quality" "$src" -o "$tmp"; then
+  if ! cwebp -quiet -metadata icc -q "$quality" "$src" -o "$tmp"; then
     rm -f "$tmp"
     echo "FAIL convert: $src" >&2
     return 1
