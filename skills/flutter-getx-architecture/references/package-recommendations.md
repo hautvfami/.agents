@@ -57,6 +57,32 @@ Prefer wrapping it behind app-level skeleton widgets instead of scattering raw s
 
 ## Common Packages To Add When Needed
 
+### `drift` + `drift_flutter`
+
+Use when the app needs structured local persistence beyond small key-value settings.
+
+Pair them with:
+
+- `drift_dev` in `dev_dependencies` for code generation and migration tooling
+- `build_runner` in `dev_dependencies`
+- an app-level `AppDatabase` registered through `get_it`
+- tables and DAOs under `app/storage/drift/`
+
+Good fit for:
+
+- offline caches
+- user-generated structured data
+- drafts and history
+- relational data
+- typed local queries
+- transactions
+- schema migrations
+
+Keep Drift APIs below repositories. GetX controllers should not query the database directly or depend on generated Drift row / companion types.
+
+When a shipped schema changes, increment `schemaVersion` and prefer `dart run drift_dev make-migrations` plus generated migration tests.
+
+
 ### `share_plus`
 
 Use when the app needs platform share flows for text, links, or files.
