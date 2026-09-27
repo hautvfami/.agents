@@ -301,7 +301,30 @@ Avoid:
 - raw string paths spread across the app
 - duplicating asset path constants by hand
 
-Read [references/flutter-gen-asset-rules.md](references/flutter-gen-asset-rules.md) for the setup and usage rules.
+Also optimize shipped media deliberately:
+
+- audit significant asset changes before release
+- prefer WebP for raster assets when it is materially smaller and visual quality is acceptable
+- use quality `85` as a practical starting point for photo-like WebP conversion, not as a universal rule
+- prefer M4A/AAC-LC for large playback-only WAV/FLAC/AIFF assets when the saving is meaningful
+- do not blindly transcode MP3 → AAC because both are lossy; prefer encoding from a lossless source when available
+- prefer `.lottie` over raw Lottie JSON when the runtime supports dotLottie and the compressed result is materially smaller
+- keep asset conversion check-first and non-destructive by default
+- update `pubspec.yaml`, generated FlutterGen access, and code references before removing old assets
+
+Bundled utility scripts:
+
+```text
+scripts/
+  audit_assets.py
+  optimize_images.sh
+  optimize_audio.sh
+  optimize_lottie.cjs
+```
+
+Read [references/flutter-gen-asset-rules.md](references/flutter-gen-asset-rules.md) for generated asset access.
+
+Read [references/asset-optimization-rules.md](references/asset-optimization-rules.md) for media optimization decisions and script usage.
 
 ### 9. Manage app environment with `envied`
 
@@ -497,6 +520,9 @@ Before wrapping up:
 - confirm pending schema changes are consolidated against the last actually shipped schema
 - confirm release notes/TODOs record pending migration work and the app-version → DB-schema history is updated when applicable
 - confirm assets are accessed through generated APIs instead of raw strings
+- when significant media changed, audit whether large PNG/JPEG, WAV/MP3, or Lottie JSON assets have a materially smaller production format
+- confirm asset optimization did not blindly re-encode lossy media or replace files without meaningful size savings
+- confirm WebP/M4A/.lottie replacements remain compatible with the runtime and generated asset references
 - confirm environment values come from `envied` instead of ad-hoc constants
 - confirm `worker_manager` is used only for work heavy enough to justify isolate complexity
 - confirm deep links are handled through one app-level service
@@ -582,6 +608,7 @@ When using this skill, finish with a short summary that includes:
 - Small stable keys use `shared_preferences`; structured or evolving local data uses `drift`.
 - Drift schema versions follow shipped release boundaries, not every development edit; amend the pending migration until it actually ships.
 - Assets use `flutter_gen`, not hardcoded paths.
+- Asset optimization is check-first: prefer WebP, M4A/AAC, and .lottie only when size, quality, and runtime compatibility justify the replacement.
 - App environment uses `envied`, not duplicated constants.
 - `worker_manager` is for heavy repeated compute, not default async work.
 - Deep links flow through one `DeeplinkService`, not scattered listeners.
