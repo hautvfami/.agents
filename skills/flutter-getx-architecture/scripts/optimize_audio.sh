@@ -199,6 +199,7 @@ convert_one() {
   fi
 
   if ! ffmpeg "${args[@]}" -f mp4 "$tmp"; then
+    rm -f "$tmp"
     echo "FAIL convert: $src" >&2
     return 1
   fi
@@ -209,6 +210,7 @@ convert_one() {
   saving="$(saving_percent "$before" "$after")"
 
   if ! meets_threshold "$saving"; then
+    rm -f "$tmp"
     echo "KEEP $src | ${before}B -> ${after}B | saving ${saving}% (< ${min_saving}%)"
     return
   fi
@@ -218,12 +220,12 @@ convert_one() {
     if [[ "$ext" == "mp3" ]]; then
       note=" | lossy->lossy: prefer original WAV/FLAC source"
     fi
+    rm -f "$tmp"
     echo "CANDIDATE $src -> $dest | ${before}B -> ${after}B | saving ${saving}% | AAC $bitrate$note"
     return
   fi
 
   mv "$tmp" "$dest"
-  trap - RETURN
 
   if [[ "$delete_original" == true ]]; then
     rm -f "$src"
