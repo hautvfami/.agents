@@ -29,10 +29,12 @@ Practical usage:
 
 Rules:
 
-- Never use odd spacing values.
-- Avoid `6`, `10`, `12`, `14`, `18`, `20`, `22` unless an existing system already depends on them and a migration is out of scope.
-- Prefer `8`, `16`, `24`, `32` as the dominant rhythm of the app.
-- Prefer fewer spacing values used consistently over a mathematically complete scale.
+- Treat the spacing scale as the default vocabulary, not a mathematical law.
+- Prefer `8`, `16`, `24`, and `32` as the dominant rhythm when they fit the design.
+- Use values outside the default scale when a real component constraint, platform convention, visual alignment requirement, or existing design system justifies them.
+- Do not create random one-off values merely to tune a screen by eye.
+- If the same exception repeats or carries semantic meaning, consider promoting it into the project's token set.
+- Prefer a small coherent spacing vocabulary over rigid adherence to one universal scale.
 
 ## Border Radius Scale
 
@@ -57,10 +59,11 @@ Practical usage:
 
 Rules:
 
-- Do not use arbitrary values like `7`, `10`, `14`, `18` unless the system already defines them.
-- Pick one default radius for primary surfaces and one secondary radius for larger surfaces.
-- Most apps work well with `8` and `12` as the default pair, or `12` and `16` for softer consumer UI.
-- If boxes are visually nested, keep radii mathematically concentric: inner radius should usually equal outer radius minus the surrounding padding.
+- Treat the radius scale as a preferred project vocabulary, not an absolute restriction.
+- Pick one or two dominant radii for primary surfaces and reuse them consistently.
+- Values outside the default scale are acceptable when the design specification or component geometry has a concrete reason.
+- If an exception repeats, consider adding it as an intentional token rather than scattering the raw value.
+- If boxes are visually nested, keep radii visually concentric; exact arithmetic may be adjusted when the design requires optical correction.
 
 ## Border and Elevation
 
@@ -203,6 +206,18 @@ Before using `IntrinsicHeight` or `IntrinsicWidth`, try:
 Be especially cautious with intrinsic widgets inside lists, grids, or repeated cells.
 
 Use DevTools layout/performance profiling when intrinsic sizing or constraint-driven rebuilds are suspected of contributing to jank.
+
+## Image Sizing Rules
+
+Avoid decoding very large raster images when they are displayed only as small thumbnails or compact cards.
+
+Prefer appropriately sized source variants from an image CDN/backend when available.
+
+For Flutter image APIs, consider `cacheWidth` / `cacheHeight` when the source image is substantially larger than the actual rendered size.
+
+Do not undersize the decode target when the image must later zoom, animate to a much larger surface, or render sharply at a larger responsive size.
+
+Treat image decode sizing as a memory optimization with visual requirements, not as a value to apply mechanically.
 
 ## Component Composition Rules
 
