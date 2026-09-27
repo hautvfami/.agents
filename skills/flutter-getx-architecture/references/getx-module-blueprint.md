@@ -94,7 +94,7 @@ lib/
       datasources/
         auth_api.dart
         profile_api.dart
-      repositories/
+      repositories/                # optional: add when a real data boundary is needed
         auth_repository.dart
         profile_repository.dart
     storage/
@@ -158,19 +158,25 @@ Put code in shared app layers when:
 - the backend surface is still small enough that per-feature API folders would add noise
 - route dependency setup is easier to understand from a centralized bindings directory
 
-Keep dependency direction one-way:
+Keep dependency direction one-way, while allowing different feature depths:
 
 ```text
-features/views
-      ↓
-controllers
-      ↓
-repositories / app services
-      ↓
-API / Drift DAO / SDK
+simple remote:
+view → controller → Retrofit API
+
+data policy:
+view → controller → repository → Retrofit API
+
+local + remote:
+view → controller → repository → Retrofit API + Drift DAO
+
+complex workflow:
+view → controller → service/use case → repository → remote/local/SDK
 ```
 
-Lower layers must not import presentation layers. Repositories must not navigate or depend on GetX controllers.
+Lower layers must not import presentation layers. Repositories, APIs, DAOs, and services must not depend on GetX controllers.
+
+Do not create missing layers just to make every feature look structurally identical.
 
 Examples of app-wide layers:
 
@@ -288,7 +294,7 @@ Put these in `get_it`:
 
 - `Dio`
 - Retrofit APIs
-- repositories
+- repositories when the project actually needs them
 - env configuration
 - shared preferences wrappers
 - Drift `AppDatabase` and DAOs
@@ -323,7 +329,7 @@ Keep app-global presentation state separate from app-global infrastructure:
 get_it infrastructure
   AuthService
   PurchaseService
-  repositories
+  Retrofit APIs / repositories as needed
        ↓
 GetX app state
   AppController
@@ -403,9 +409,9 @@ For remote APIs, prefer this split:
 
 - `app/data/models/` for DTOs annotated with `@JsonSerializable()`
 - `app/data/models/api_response.dart` for the shared generic envelope when the backend wraps payloads
-- `app/data/failures/` for typed failures used with `result_dart`
+- `app/data/failures/` for typed failures when an explicit result/failure boundary is useful
 - `app/data/datasources/` for `@RestApi()` Retrofit clients
-- `app/data/repositories/` for all repository implementations
+- `app/data/repositories/` for repository implementations only when a repository adds real data policy, reuse, cache/offline behavior, failure normalization, or source coordination
 - `app/storage/preferences/` for small key-value settings
 - `app/storage/drift/` for `AppDatabase`, tables, DAOs, migrations, and structured local data
 - keep Drift below repositories; controllers and views should not import generated Drift rows, companions, or query builders
@@ -417,9 +423,11 @@ For remote APIs, prefer this split:
 - `app/workers/` for isolate-backed compute tasks when worker reuse is justified
 - feature folders for controllers, views, bindings, and feature-only widgets
 
-Do not place raw API calls in controllers.
+Controllers may call an injected typed Retrofit API directly for simple remote-only flows. Do not place raw `Dio` / `http` request construction or manual JSON parsing in controllers.
 
-Keep repository placement consistent across the app: repositories live under `app/data/repositories/`, not inside feature folders.
+When repositories are justified, keep their placement consistent under `app/data/repositories/`. Do not create repository files merely to forward a Retrofit call.
+
+Likewise, do not create use-case classes that only call one repository method. Add a service/use case when it owns meaningful orchestration or business policy.
 
 Read [package-recommendations.md](package-recommendations.md) when deciding which third-party packages should be part of the project baseline.
 
