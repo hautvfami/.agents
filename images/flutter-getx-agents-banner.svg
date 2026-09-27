@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="520" viewBox="0 0 1600 520" role="img" aria-labelledby="title desc">
+  <title id="title">Flutter + GetX .agents</title>
+  <desc id="desc">Professional dark banner with warm yellow accents for a Flutter and GetX agent skills repository.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B1524"/>
+      <stop offset="1" stop-color="#15253A"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#18283E"/>
+      <stop offset="1" stop-color="#111D2E"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000" flood-opacity=".24"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="520" rx="28" fill="url(#bg)"/>
+  <circle cx="140" cy="70" r="170" fill="#F2B84B" opacity=".05"/>
+  <circle cx="1445" cy="470" r="220" fill="#F2B84B" opacity=".06"/>
+
+  <!-- left code panel -->
+  <g filter="url(#shadow)">
+    <rect x="56" y="70" width="390" height="330" rx="22" fill="url(#panel)" stroke="#2B3C54"/>
+    <rect x="56" y="70" width="390" height="46" rx="22" fill="#1A2A40"/>
+    <circle cx="82" cy="93" r="6" fill="#EF6B5B"/>
+    <circle cx="102" cy="93" r="6" fill="#E9B949"/>
+    <circle cx="122" cy="93" r="6" fill="#5CB87A"/>
+    <text x="150" y="99" fill="#B7C3D3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16">main.dart</text>
+
+    <text x="84" y="153" fill="#7CB7E8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">void</text>
+    <text x="132" y="153" fill="#F4D071" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">main()</text>
+    <text x="200" y="153" fill="#D9E3EE" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">{</text>
+
+    <text x="104" y="189" fill="#D9E3EE" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">runApp(</text>
+    <text x="188" y="189" fill="#7CB7E8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">GetMaterialApp</text>
+    <text x="330" y="189" fill="#D9E3EE" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">(</text>
+
+    <text x="124" y="225" fill="#A9B8C9" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">title:</text>
+    <text x="190" y="225" fill="#F2B84B" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">'AI Agents'</text>
+    <text x="310" y="225" fill="#A9B8C9" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">,</text>
+
+    <text x="124" y="261" fill="#A9B8C9" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">home:</text>
+    <text x="188" y="261" fill="#7CB7E8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">HomePage</text>
+    <text x="278" y="261" fill="#D9E3EE" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">(),</text>
+
+    <text x="104" y="297" fill="#D9E3EE" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">));</text>
+    <text x="84" y="333" fill="#D9E3EE" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18">}</text>
+
+    <rect x="86" y="356" width="122" height="28" rx="14" fill="#F2B84B" opacity=".14"/>
+    <text x="105" y="376" fill="#F2B84B" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="600">GetX focused</text>
+  </g>
+
+  <!-- center -->
+  <g>
+    <text x="522" y="185" fill="#F4F6F8" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="78" font-weight="800" letter-spacing="-2">Flutter + GetX</text>
+    <text x="1046" y="185" fill="#F2B84B" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="78" font-weight="800" letter-spacing="-2">.agents</text>
+
+    <text x="526" y="235" fill="#B9C4D2" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24">Pragmatic agent skills for maintainable Flutter apps</text>
+
+    <g transform="translate(526 292)">
+      <rect width="164" height="68" rx="18" fill="#152338" stroke="#33455F"/>
+      <circle cx="32" cy="34" r="12" fill="#F2B84B"/>
+      <path d="M29 28h6v12h-6zM24 33h16v3H24z" fill="#0F1B2D"/>
+      <text x="56" y="42" fill="#E9EEF4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700">Plan</text>
+
+      <rect x="182" width="164" height="68" rx="18" fill="#152338" stroke="#33455F"/>
+      <circle cx="214" cy="34" r="12" fill="#F2B84B"/>
+      <path d="M209 34h10M214 29v10" stroke="#0F1B2D" stroke-width="3" stroke-linecap="round"/>
+      <text x="238" y="42" fill="#E9EEF4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700">Build</text>
+
+      <rect x="364" width="164" height="68" rx="18" fill="#152338" stroke="#33455F"/>
+      <circle cx="396" cy="34" r="12" fill="#F2B84B"/>
+      <path d="M391 31l5-5 5 5M396 26v16" stroke="#0F1B2D" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="420" y="42" fill="#E9EEF4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700">Ship</text>
+    </g>
+
+    <text x="526" y="409" fill="#7F8FA3" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="18">Architecture • GetX • Retrofit • Drift • Design • Automation</text>
+  </g>
+
+  <!-- right phone card -->
+  <g transform="translate(1270 58)" filter="url(#shadow)">
+    <rect width="256" height="404" rx="42" fill="#0A1321" stroke="#3A4C65" stroke-width="2"/>
+    <rect x="18" y="26" width="220" height="350" rx="28" fill="#142238"/>
+    <rect x="91" y="12" width="74" height="9" rx="5" fill="#25364D"/>
+
+    <text x="42" y="86" fill="#F5F7FA" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="30" font-weight="800">Agents</text>
+    <text x="42" y="113" fill="#8999AC" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Build less boilerplate.</text>
+
+    <rect x="34" y="142" width="188" height="56" rx="14" fill="#1C2C43"/>
+    <circle cx="60" cy="170" r="12" fill="#F2B84B"/>
+    <text x="84" y="176" fill="#EAF0F5" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">GetX Architecture</text>
+
+    <rect x="34" y="210" width="188" height="56" rx="14" fill="#1C2C43"/>
+    <circle cx="60" cy="238" r="12" fill="#F2B84B"/>
+    <text x="84" y="244" fill="#EAF0F5" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">Asset Tools</text>
+
+    <rect x="34" y="278" width="188" height="56" rx="14" fill="#1C2C43"/>
+    <circle cx="60" cy="306" r="12" fill="#F2B84B"/>
+    <text x="84" y="312" fill="#EAF0F5" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="700">Practical Rules</text>
+
+    <rect x="34" y="348" width="188" height="40" rx="12" fill="#F2B84B"/>
+    <text x="86" y="374" fill="#101A28" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="16" font-weight="800">Run Agent</text>
+  </g>
+</svg>
