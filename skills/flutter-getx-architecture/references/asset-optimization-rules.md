@@ -36,8 +36,8 @@ At runtime, consider `cacheWidth` / `cacheHeight` for large raster sources rende
 Use:
 
 ```bash
-./skills/flutter-getx-architecture/scripts/optimize_images.sh assets/images
-./skills/flutter-getx-architecture/scripts/optimize_images.sh --write assets/images
+bash skills/flutter-getx-architecture/scripts/optimize_images.sh assets/images
+bash skills/flutter-getx-architecture/scripts/optimize_images.sh --write assets/images
 ```
 
 The default mode is audit/check. `--write` creates accepted WebP candidates. Originals are kept unless `--delete-original` is explicitly supplied.
@@ -67,14 +67,14 @@ Rules:
 Use:
 
 ```bash
-./skills/flutter-getx-architecture/scripts/optimize_audio.sh assets/audio
-./skills/flutter-getx-architecture/scripts/optimize_audio.sh --preset speech --write assets/audio
+bash skills/flutter-getx-architecture/scripts/optimize_audio.sh assets/audio
+bash skills/flutter-getx-architecture/scripts/optimize_audio.sh --preset speech --write assets/audio
 ```
 
 To transcode an MP3 intentionally:
 
 ```bash
-./skills/flutter-getx-architecture/scripts/optimize_audio.sh \
+bash skills/flutter-getx-architecture/scripts/optimize_audio.sh \
   --write \
   --allow-lossy-transcode \
   assets/audio/intro.mp3
@@ -102,8 +102,8 @@ npm install --save-dev @lottiefiles/dotlottie-io
 Then:
 
 ```bash
-node ./skills/flutter-getx-architecture/scripts/optimize_lottie.cjs assets/lottie
-node ./skills/flutter-getx-architecture/scripts/optimize_lottie.cjs --write assets/lottie
+node skills/flutter-getx-architecture/scripts/optimize_lottie.cjs assets/lottie
+node skills/flutter-getx-architecture/scripts/optimize_lottie.cjs --write assets/lottie
 ```
 
 The script:
@@ -123,7 +123,7 @@ Run an asset audit when a feature adds or changes significant media.
 Use:
 
 ```bash
-python3 ./skills/flutter-getx-architecture/scripts/audit_assets.py assets
+python3 skills/flutter-getx-architecture/scripts/audit_assets.py assets
 ```
 
 The audit should surface:
