@@ -406,6 +406,10 @@ Before wrapping up:
 - confirm names are precise but concise and do not repeat class/file context unnecessarily
 - confirm meaningful UI blocks are extracted as widgets rather than large widget-returning helpers where appropriate
 - confirm abstractions such as BaseRepository/BaseController/BaseService exist only when real repeated behavior justifies them
+- confirm repeated class-internal logic stays in private methods until real reuse justifies extraction
+- confirm reusable type-focused behavior uses extensions when that reads naturally
+- confirm common date/time display formatting is centralized in `DateTime` extensions rather than repeated raw format strings
+- confirm mixins are used only for genuine shared instance behavior and stay narrowly focused
 - confirm imports are minimal and intentional module barrels export only stable public surfaces
 - confirm public mutable state is intentional and not just exposed for convenience
 - confirm dot shorthand is used where Dart >= 3.10 and the context type is obvious
@@ -474,6 +478,8 @@ When using this skill, finish with a short summary that includes:
 - Use enum or a small sealed hierarchy only when it makes state simpler; do not add Freezed/codegen for simple state.
 - Names should be precise and short enough to scan; do not repeat obvious class or file context.
 - Prefer simple concrete code over premature base classes or generic abstractions.
+- Reuse should follow ownership: private method first, extension for type-focused behavior, mixin only for proven shared instance behavior.
+- Common date/time presentation formatting belongs in focused `DateTime` extensions; one-off formats may stay local.
 - Barrel files expose stable module APIs, not every implementation file.
 - Use Dart dot shorthand when the context type is obvious and the project language version supports it.
 - Global state is for cross-feature app-lifecycle state, not feature-local convenience.
