@@ -418,8 +418,12 @@ Views should usually not:
 - fetch dependencies in many places
 - run business logic inline
 - contain duplicated loading, empty, or error handling everywhere
+- start feature-level async operations from `build()`
+- default to `FutureBuilder` for data that already belongs to controller state
 
 Prefer one controller per screen or tightly related flow. If a screen needs too many controller responsibilities, split the feature instead of stacking more reactive variables.
+
+Keep `build()` cheap and repeatable. For normal GetX feature loading, prefer controller-owned async state over `FutureBuilder`. Use `FutureBuilder` only for a genuinely local self-contained Future, and keep that Future stable across ordinary rebuilds. The same lifecycle rule applies to Streams used by `StreamBuilder`.
 
 ### 15. Keep navigation and side effects explicit
 
@@ -501,6 +505,10 @@ Before wrapping up:
 - confirm translated ARB files are generated through `arb_translate`
 - confirm reactive rebuild scope is narrow enough
 - confirm views are thinner than before
+- confirm `build()` methods do not start network/storage work, perform avoidable heavy transforms, or trigger side effects
+- confirm `FutureBuilder` is not used where GetX controller state already owns the async feature lifecycle
+- confirm justified `FutureBuilder` / `StreamBuilder` inputs are stable rather than recreated in `build()`
+- confirm large raster images are not decoded at unnecessarily high resolution for small thumbnails
 - remove unnecessary `Get.find`, `.obs`, or wrapper builders
 - run the smallest useful validation set
 
@@ -579,4 +587,7 @@ When using this skill, finish with a short summary that includes:
 - Deep links flow through one `DeeplinkService`, not scattered listeners.
 - English content lives in `app_en.arb`; other locales come from `arb_translate`.
 - Use the smallest reactive surface that works.
+- Keep `build()` cheap and declarative; async feature work belongs outside ordinary build execution.
+- In GetX features, controller-owned async state is the default; `FutureBuilder` is a narrow local exception.
+- Size raster decoding to real display needs when large source images would waste memory.
 - If GetX usage becomes invisible magic, the architecture is too implicit.
